@@ -1,0 +1,833 @@
+
+\documentclass{article}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{geometry}
+\usepackage{longtable}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+% \usepackage{algorithm}
+% \usepackage{algorithmic}
+
+% \usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage{graphicx}
+\newgeometry{left=2cm,bottom=2cm}
+\usepackage{amsthm}
+\usepackage{xcolor}
+
+\newtheorem{proposition}{Proposition}
+\newtheorem{definition}{Definition}
+\newtheorem{example}{Example}
+% Define theorem environments
+\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}{Corollary}
+\newtheorem{lemma}{Lemma}
+
+\title{Riemannian VAE}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+
+{\color{red}
+\textbf{Latent space:} The encoder produces $z \in B_T \subset \mathbb{R}^L$.
+
+\textbf{Tangent space:} The decoder map $f_\theta$ takes $z$ and projects it into 
+the tangent space at $\mu$:
+\[
+    f_\theta : B_T \to T_\mu M.
+\]
+
+\textbf{Manifold projection via exponential map:} The exponential map takes 
+tangent vectors and maps it to points on the manifold $M$:
+\[
+    f^M_\theta = \mathrm{Exp}_\mu \circ f_\theta : B_T \to M.
+\]
+We can write $f_\theta^M(z)=\operatorname{Exp}_\mu\left(f_\theta(z)\right)$.
+}
+
+
+
+
+\section{Riemannian Geometry}
+\subsection{(Sub)manifolds, Weighted (Sub)manifolds}
+
+\begin{definition}[Riemannian manifold]
+A Riemannian manifold \(M\) is a differentiable manifold \(M\) equipped with a Riemannian metric \(g\), which is a smoothly varying 
+inner product on the tangent spaces of \(M\).
+\end{definition}
+
+\begin{example}[The 2-sphere]
+Consider the 2-sphere
+\[
+S^2 = \{ (x,y,z) \in \mathbb{R}^3 : x^2 + y^2 + z^2 = 1 \}.
+\]
+
+\textbf{Step 1: Differentiable manifold.}  
+\(S^2\) is a smooth 2-dimensional surface sitting in \(\mathbb{R}^3\).   Locally, we can describe it with coordinates, for instance spherical coordinates:
+\[
+(\theta,\phi) \mapsto (\sin\theta \cos\phi, \, \sin\theta \sin\phi, \, \cos\theta),
+\]
+with \(\theta \in (0,\pi)\) and \(\phi \in (0,2\pi)\).
+
+\textbf{Step 2: Tangent spaces.}  
+At each point \(p \in S^2\), the tangent space \(T_p S^2\) is the 2-dimensional plane in \(\mathbb{R}^3\) orthogonal to the radius vector \(p\).  
+
+We define the Riemannian metric \(g\) as the restriction of the standard Euclidean inner product on \(\mathbb{R}^3\) to these tangent planes. Concretely, if 
+\(\vec{u}, \vec{v} \in T_p S^2 \subset \mathbb{R}^3\), then
+\[
+g_p(\vec{u}, \vec{v}) = \vec{u} \cdot \vec{v}.
+\]
+
+\textbf{Step 4: Explicit form.}  
+In spherical coordinates, this metric has the local expression
+\[
+g = d\theta^2 + \sin^2 \theta \, d\phi^2,
+\]
+which makes explicit how lengths and angles are measured on the surface of the sphere.
+
+
+We parametrize the unit sphere by spherical coordinates:
+\[
+\vec{X}(\theta,\phi) = 
+\bigl(\sin\theta \cos\phi,\ \sin\theta \sin\phi,\ \cos\theta\bigr),
+\qquad \theta \in (0,\pi),\ \phi \in (0,2\pi).
+\]
+
+\textbf{Tangent basis:}  
+The tangent basis vectors are
+\[
+\vec{e}_\theta = \frac{\partial \vec{X}}{\partial \theta} 
+= (\cos\theta \cos\phi,\ \cos\theta \sin\phi,\ -\sin\theta),
+\]
+\[
+\vec{e}_\phi = \frac{\partial \vec{X}}{\partial \phi} 
+= (-\sin\theta \sin\phi,\ \sin\theta \cos\phi,\ 0).
+\]
+
+\textbf{Metric coefficients:}  
+The induced metric is obtained from the Euclidean dot product:
+\[
+g_{ij} = \vec{e}_i \cdot \vec{e}_j.
+\]
+Hence
+\[
+g_{\theta\theta} = \vec{e}_\theta \cdot \vec{e}_\theta 
+= \cos^2\theta(\cos^2\phi+\sin^2\phi) + \sin^2\theta = 1,
+\]
+\[
+g_{\theta\phi} = \vec{e}_\theta \cdot \vec{e}_\phi 
+= \cos\theta\cos\phi(-\sin\theta\sin\phi) 
++ \cos\theta\sin\phi(\sin\theta\cos\phi) + (-\sin\theta)\cdot 0 = 0,
+\]
+\[
+g_{\phi\phi} = \vec{e}_\phi \cdot \vec{e}_\phi 
+= \sin^2\theta(\sin^2\phi+\cos^2\phi) = \sin^2\theta.
+\]
+
+\textbf{Line element:}  
+The infinitesimal displacement on the surface is
+\[
+d\vec{X} = \vec{e}_\theta\, d\theta + \vec{e}_\phi\, d\phi.
+\]
+Its squared length, using the Euclidean dot product, is
+\[
+ds^2 = d\vec{X}\cdot d\vec{X}
+= (\vec{e}_\theta d\theta + \vec{e}_\phi d\phi)\cdot(\vec{e}_\theta d\theta + \vec{e}_\phi d\phi)
+= \begin{bmatrix}
+d\theta & d\phi
+\end{bmatrix}
+\begin{bmatrix}
+g_{\theta\theta} & g_{\theta\phi} \\
+g_{\phi\theta} & g_{\phi\phi}
+\end{bmatrix}
+\begin{bmatrix}
+d\theta \\
+d\phi
+\end{bmatrix}.
+\]
+
+Therefore the Riemannian metric in local coordinates \((\theta,\phi)\) is
+\[
+ds^2 = g_{\theta\theta}\, d\theta^2 + 2 g_{\theta\phi}\, d\theta\, d\phi
++ g_{\phi\phi}\, d\phi^2
+= d\theta^2 + \sin^2\theta \, d\phi^2.
+\]
+
+\textbf{Geometric meaning:}  
+The coefficient of \(d\theta^2\) shows that moving along a meridian 
+has true arc length proportional to the change in \(\theta\).  
+The coefficient \(\sin^2\theta\) shows that circles of latitude 
+have circumference \(2\pi\sin\theta\) on the unit sphere.
+
+Thus, \((S^2, g)\) is a Riemannian manifold: the smooth surface of the sphere together 
+with the induced inner product structure that varies smoothly from point to point.
+\end{example}
+
+
+
+\begin{definition}[Submanifold and embedded submanifold]
+A subset $N$ of $M$ is a submanifold of $M$ if it is included in $M$ and is a manifold. The submanifold $N$ of $M$ is
+called an embedded submanifold of $M$ if there exists a smooth manifold $X$ and a smooth embedding f such that:
+$N = f(X)$.
+\end{definition}
+
+The objective of the rVAE is submanifold learning.
+
+The Riemannian metric $g$ of $M$ induces an infinitesimal volume element on each tangent space. Thus, a measure on
+the manifold $M$ has the expression $dM = \sqrt{\textrm{det}(g(x))}dx$ in local coordinate system $x$.
+
+\begin{example}[Volume element on the 2-sphere]
+On the unit sphere in spherical coordinates $(\theta,\phi)$ the metric is
+\[
+ds^2 = d\theta^2 + \sin^2\theta\, d\phi^2,
+\]
+so the metric matrix is
+\[
+g(\theta,\phi) =
+\begin{bmatrix}
+1 & 0 \\
+0 & \sin^2\theta
+\end{bmatrix}.
+\]
+Its determinant is
+\[
+\det(g) = \sin^2\theta,
+\]
+hence the Riemannian volume element is
+\[
+dM = \sqrt{\det(g)}\, d\theta\, d\phi = \sin\theta\, d\theta\, d\phi.
+\]
+Integrating over $\theta\in[0,\pi],\ \phi\in[0,2\pi]$ yields
+\[
+\int_0^{2\pi}\int_0^\pi \sin\theta\, d\theta\, d\phi = 4\pi,
+\]
+the total surface area of the unit sphere.
+\end{example}
+
+
+\begin{definition}[Weighted Submanifold] 
+Given a complete $d$-dimensional Riemannian manifold $(M, g)$ and a smooth probability distribution $\omega: M \rightarrow \mathbb{R}$, the weighted manifold $(M, \omega)$ associated to $M$ and $\omega$ is defined as the triplet:
+
+\begin{equation}
+   (M, g, \omega \cdot dM) 
+\end{equation}
+
+where $dM$ denotes the Riemannian measure of $M$.
+\end{definition}
+
+
+\begin{example}[Weighted sphere]
+Consider the unit 2-sphere
+\[
+S^2 = \{ (x,y,z) \in \mathbb{R}^3 : x^2+y^2+z^2 = 1 \},
+\]
+equipped with the standard Riemannian metric induced from $\mathbb{R}^3$.  
+The corresponding Riemannian volume element in spherical coordinates $(\theta,\phi)$ is
+\[
+dM = \sin\theta \, d\theta\, d\phi.
+\]
+
+Now define a smooth probability density $\omega(\theta,\phi) = \tfrac{1}{4\pi}$, the uniform distribution on the sphere.  
+Then the weighted manifold is given by
+\[
+\bigl(S^2, g, \omega \cdot dM \bigr)
+= \bigl(S^2, g, \tfrac{1}{4\pi} \sin\theta \, d\theta \, d\phi \bigr).
+\]
+
+In this case, $\omega \cdot dM$ is exactly the uniform probability measure on the sphere.
+\end{example}
+
+\subsection{Geodesic and Geodesic Subspaces}
+Let $u, v$ be vector fields on $M$. The Riemannian metric $g$ on $M$ induces the notion of covariant derivative. 
+The covariant derivative of $v$ in the direction of $u$, written $\nabla_u v$, represents the change of the vector field $v$
+in the $u$ direction with the normal component subtracted. In other words, it is the orthogonal projection of the Euclidean directional 
+derivative onto the manifolds tangent space.
+
+
+But it doesn’t mean the result necessarily points in the direction of $u$. Think of $\nabla_u v$ answering: “How does the field 
+$v$ change when I walk a little step in direction $u$?” The outcome is another tangent vector, but its orientation can be arbitrary in the tangent space. For instance, on the 2-sphere, parallel transporting a vector along a latitude line (a small circle) produces a derivative that points in a different tangent direction than $u$.
+
+
+Let $\gamma$ be a curve on $M$ parameterized by $t$, as $\gamma:[0,1] \mapsto M, t \mapsto \gamma(t)$. Its velocity is: $\dot{\gamma}=\frac{d \gamma}{d t}$. Let $u$ be a vector field $t \mapsto u(t)$ defined along $\gamma$. For a vector field $u(t)$ defined along $\gamma$, the covariant derivative of $u$ in the direction of velocity $\dot{\gamma}$ is $\nabla_{\dot{\gamma}} u$.
+
+\begin{definition}[Geodesic]
+The curve $\gamma:[0,1]\to M$ is called a geodesic if it satisfies
+the equation
+\[
+\nabla_{\dot{\gamma}} \dot{\gamma} = 0,
+\]
+where $\nabla$ denotes the covariant derivative of the Levi--Civita
+connection associated with the Riemannian metric of $M$.
+\end{definition}
+
+A geodesic on $S^2$ is, by definition, a curve  $\gamma(t)$ on the sphere such that its velocity vector 
+$\dot{\gamma}(t)$ is transported parallel to itself:
+\[
+\nabla_{\dot{\gamma}} \dot{\gamma} = 0.
+\]
+Intuitively, this means the curve has no extrinsic acceleration tangent to the sphere---it ``moves straight'' within the curved surface. 
+In other words, this means “move forward without turning”--it’s the generalization of a straight line to curved spaces. 
+
+A geodesic does not bend intrinsically on the surface: its velocity  vector is parallel transported along itself, making it the ``straightest'' 
+possible curve with respect to the surface geometry. However, because  the surface itself is curved, the geodesic may appear bent when viewed 
+extrinsically in the ambient Euclidean space.
+
+
+\begin{example}
+Consider the unit sphere $S^2 \subset \mathbb{R}^3$ equipped with the Riemannian metric induced from the standard Euclidean metric on $\mathbb{R}^3$.
+Let $\gamma(t) = (\cos t, \sin t, 0)$ be a parametrized curve on the sphere, which traces the equator.
+
+The velocity of $\gamma$ is
+\[
+\dot{\gamma}(t) = (-\sin t, \cos t, 0).
+\]
+To compute the covariant derivative $\nabla_{\dot{\gamma}} \dot{\gamma}$, we first look at the Euclidean derivative of $\dot{\gamma}$:
+\[
+\frac{d}{dt}\dot{\gamma}(t) = (-\cos t, -\sin t, 0).
+\]
+
+This derivative is not tangent to the sphere: in fact,
+\[
+\frac{d}{dt}\dot{\gamma}(t) = -\gamma(t),
+\]
+which points points radially inward, orthogonal to the tangent space of the sphere at $\gamma(t)$. The covariant derivative $\nabla_{\dot{\gamma}} \dot{\gamma}$ is obtained by projecting the Euclidean derivative back onto the tangent space of $S^2$.
+Since the derivative is purely normal to $S^2$, its tangential component vanishes:
+\[
+\nabla_{\dot{\gamma}} \dot{\gamma} = 0.
+\]
+
+Hence the equator is a geodesic. More generally, any great circle (i.e.\ the intersection of $S^2$ with a plane through the origin)
+satisfies $\nabla_{\dot{\gamma}} \dot{\gamma}=0$ and is therefore a geodesic. Small circles, such as the parallels of latitude that are not great circles, do not satisfy this condition and are not geodesics.
+\end{example}
+
+Intuitively, a geodesic is a curve that is parallel to itself. In this sense, a geodesic generalizes the notion of linear
+curve on Euclidean spaces. As an example, geodesics on the sphere are the great circles. Geodesics are the equivalent on Riemannian manifolds
+of 1D linear subspaces in Euclidean spaces. We define “geodesic subspaces”, that generalize to manifolds higher dimensional
+subspaces of Euclidean spaces.
+
+\paragraph{Christoffel Symbols} 
+After differentiating a basis vector, projecting onto the tangent plane, and decomposing into basis vector components, we obtain the Christoffel symbols. They are written as
+
+\[
+\nabla_{\partial_i} \vec{e}_j 
+= \sum_{k \in \{\theta,\phi\}} \Gamma^k_{ij}\,\vec{e}_k.
+\]
+
+Here:
+\begin{itemize}
+  \item $k$ indicates the basis vector direction the result points along after projection (the component we are looking at),
+  \item $i$ indicates the direction of differentiation (the variable with respect to which we differentiate),
+  \item $j$ indicates the basis vector being differentiated.
+\end{itemize}
+
+\begin{example}
+Consider the basis vector
+\[
+\vec{e}_\theta = \frac{\partial \vec{X}}{\partial \theta} 
+= (\cos\theta \cos\phi,\ \cos\theta \sin\phi,\ -\sin\theta).
+\]
+
+Differentiate with respect to $\phi$:
+\[
+\frac{\partial \vec{e}_\theta}{\partial \phi} 
+= (-\cos\theta \sin\phi,\ \cos\theta \cos\phi,\ 0).
+\]
+
+
+Now project this derivative onto the tangent plane spanned by 
+$\{\vec{e}_\theta, \vec{e}_\phi\}$.
+
+Dot product with $\vec{e}_\theta$ gives $0$.
+Dot product with $\vec{e}_\phi = (-\sin\theta \sin\phi,\ \sin\theta \cos\phi,\ 0)$ gives $\cos\theta \sin\theta$.
+
+Since $\|\vec{e}_\phi\|^2 = \sin^2\theta$, the coefficient is
+\[
+\frac{\cos\theta \sin\theta}{\sin^2\theta} = \cot\theta.
+\]
+
+So the tangential decomposition is
+\[
+\nabla_{\partial_\phi}\vec{e}_\theta = \cot\theta\, \vec{e}_\phi.
+\]
+
+Written in Christoffel symbol form,
+\[
+\nabla_{\partial_\phi}\vec{e}_\theta 
+= \Gamma^\theta_{\phi\theta}\,\vec{e}_\theta 
++ \Gamma^\phi_{\phi\theta}\,\vec{e}_\phi,
+\]
+with
+\[
+\Gamma^\theta_{\phi\theta} = 0,
+\qquad
+\Gamma^\phi_{\phi\theta} = \cot\theta.
+\]
+
+\end{example}
+
+
+\paragraph{Christoffel Symbols from the Metric}
+
+We begin from the definition of the metric:
+\[
+g_{ij} = \vec e_i \cdot \vec e_j.
+\]
+
+Differentiating with respect to $x^k$ gives
+\[
+\partial_k g_{ij}
+= (\partial_k \vec e_i)\cdot \vec e_j
++ \vec e_i \cdot (\partial_k \vec e_j).
+\]
+
+Using the covariant derivative expansion
+\[
+\nabla_{\partial_k}\vec e_i
+= \Gamma^p_{ki}\, \vec e_p,
+\]
+
+we can replace $\partial_k \vec e_i$ by
+\[
+\partial_k \vec e_i = \Gamma^p_{ki}\, \vec e_p.
+\]
+
+Thus
+\[
+\begin{aligned}
+\partial_k g_{ij} &= \Gamma^p_{ki}\,\vec e_p\!\cdot\!\vec e_j \;+\; \vec e_i\!\cdot\!\Gamma^p_{kj}\,\vec e_p\\
+&= \Gamma^p_{ki}\, g_{pj} \;+\; \Gamma^p_{kj}\, g_{ip}
+\end{aligned}
+\]
+
+
+Now, we write down the three cyclic permutations:
+
+\[
+\partial_k g_{lm} = \Gamma^p_{kl} g_{pm} + \Gamma^p_{km} g_{lp},
+\]
+\[
+\partial_l g_{km} = \Gamma^p_{lk} g_{pm} + \Gamma^p_{lm} g_{kp},
+\]
+\[
+\partial_m g_{kl} = \Gamma^p_{mk} g_{pl} + \Gamma^p_{ml} g_{kp}.
+\]
+
+Adding the first two, subtracting the third and using $\Gamma^p_{mk} = \Gamma^p_{km}$, $\Gamma^p_{ml} = \Gamma^p_{lm}$ 
+$\Gamma^p_{kl} = \Gamma^p_{lk}$ (Levi–Civita connection is torsion-free), $g_{lp} = g_{pl}$ (metric tensor is symmetric) we get:
+\[
+\partial_k g_{lm} + \partial_l g_{km} - \partial_m g_{kl}
+= 2\,\Gamma^p_{kl}\, g_{pm}.
+\]
+
+Finally, contracting both sides with the inverse metric $g^{im}$ yields
+\[
+\Gamma^i_{kl}
+= \tfrac{1}{2} g^{im}\big(
+\partial_k g_{lm}
++ \partial_l g_{km}
+- \partial_m g_{kl}
+\big).
+\]
+
+This is the standard formula for the Christoffel symbols of the Levi--Civita connection.
+
+
+\begin{definition}[Parallel transport]
+Let $\gamma:[0,1]\to M$ be a smooth curve on a Riemannian manifold $(M,g)$. A vector field $u(t)$ along $\gamma$ is called \emph{parallel transported}
+if it satisfies
+\[
+\nabla_{\dot\gamma(t)} u(t) = 0.
+\]
+This means the vector field does not twist relative to the manifold's geometry as it moves along the curve.
+\end{definition}
+
+
+\begin{example}[Parallel transport on the sphere]
+On the unit sphere $S^2 \subset \mathbb{R}^3$, consider a tangent vector at a point on the equator. If the curve $\gamma$ is the equator itself 
+(a geodesic), then parallel transport keeps the vector pointing in the  same direction relative to the equator.
+\end{example}
+
+\subsection{Riemannian Exp and Log Maps}
+
+For any point $x \in M$ and tangent vector at this point $u \in T_xM$, there exits a unique geodesic $\gamma$, with initial conditions 
+$\gamma(0) = x$ and $\gamma'(0) = u$. In general, the existence of the geodesic is only guaranteed locally around 0. As we assume 
+the completeness of the manifold $M$, the geodesics are defined on $\mathbb{R}$.
+
+\begin{definition}[Riemannian exp map]
+Let $\gamma$ be the unique geodesic with initial condition $\gamma(0)=x$ and  $\gamma'(0)=u$. We define the Riemannian exponential map 
+at $x$ as:
+
+\begin{equation}
+    \mathrm{Exp}_x(u) = \gamma(1)
+\end{equation}
+\end{definition}
+
+
+The exponential map takes a point $x$ and tangent vector $u$ and returns the point at time 1 obtained by “shooting” with
+$u$ along the geodesic. The exponential map is a local diffeomorphism onto a neighbourhood of $x$ in $M$. Let $V(x)$
+be the largest neighbourhood on which the exponential map at $x$ is a diffeomorphism. We can define its inverse on $V (x)$.
+
+
+\begin{definition}[Riemannian log map]
+The Riemannian exponential map has an inverse on the domain $V (x)$, defined as the Riemannian log map at $x$, and denoted $Log_x$.
+\end{definition}
+
+The domain $V (x)$ is the global bijectivity domain of the exponential map at $x$. 
+One can show that $V (x)$ is a star-shaped domain delimited by a continuous curve $\mathcal{C}_x$.
+
+\subsection{Tangential cut locus, cut locus and Injectivity radius}
+
+\begin{definition}
+    The curve $\mathcal{C}_x$ delimiting $V(x)$ is called the tangential cut locus of $x$. 
+    The image of $\mathcal{C}_x$ by the exponential map at $x$ is called the cut locus of $x$.
+\end{definition}
+
+We can define the distance from a point $x$ to its cut locus $C = \mathcal{C}_x$.
+
+In 2-sphere, $\mathcal{C}_x$ is the circle of radius $\pi$ in the tangent plane (tangential cut locus).
+Its image under $\textrm{Exp}_x$ is the antipodal point (the cut locus).
+
+
+On the unit 2-sphere $S^2$, the exponential map $\mathrm{Exp}_x$ at a point $x \in S^2$ takes a tangent vector $u \in T_xS^2$ 
+and maps it to the point reached by following the geodesic in the direction of $u$ for length $\|u\|$. 
+
+The injectivity radius at $x$ is the largest radius $r$ such that $\mathrm{Exp}_x$ is one-to-one on the ball $B_r(0) \subset T_xS^2$. 
+On $S^2$, geodesics starting from $x$ remain unique until they meet again at the antipodal point, a distance $\pi$ away. 
+Thus
+\[
+\mathrm{inj}_x(S^2) = \pi \quad \text{for all } x \in S^2.
+\]
+
+Since this value is the same for every point, the global injectivity radius is
+\[
+\mathrm{inj}(S^2) = \pi.
+\]
+
+Notice that the diameter of $S^2$ is also $\pi$, so here we achieve equality in the general bound
+\[
+0 < \mathrm{inj}(M) \leq \mathrm{diam}(M).
+\]
+
+
+\subsection{Hadamard Manifolds}
+
+\begin{theorem}[Cartan--Hadamard]
+Let $(M,g)$ be a simply connected, complete Riemannian manifold with non-positive sectional curvature (i.e.\ a Hadamard manifold). 
+Then, for any point $x \in M$, the exponential map
+\[
+\mathrm{Exp}_x : T_xM \;\to\; M
+\]
+is a global diffeomorphism. 
+\end{theorem}
+
+\begin{corollary}
+On a Hadamard manifold, the logarithm map
+\[
+\mathrm{Log}_x : M \;\to\; T_xM
+\]
+is globally well-defined for every $x \in M$. 
+In particular, every point on the manifold corresponds uniquely to a tangent vector at $x$, and computations on $M$ can be transferred to the Euclidean vector space $T_xM$ via the logarithm map.
+\end{corollary}
+
+\subsection{Distance in $M$ and between submanifolds of $M$}
+
+\begin{definition}[Riemannian distance]
+For any point $y \in V(x)$, the Riemannian distance function is given by
+\[
+    d_M(x, y) = \| \mathrm{Log}_x(y) \|_{g(x)}
+\]
+where the norm corresponds to the inner product $g(x)$ at $x$.
+\end{definition}
+
+\begin{definition}[Wasserstein distance]
+The 2-Wasserstein distance between probability measures $\mu$ and $\nu$ defined on $M$ is given by
+\[
+    d_2(\mu, \nu) =
+    \left(
+        \inf_{\gamma \in \Gamma(\mu, \nu)}
+        \int_{M \times M}
+        d_M^2(x_1, x_2) \, d\gamma(x_1, x_2)
+    \right)^{1/2},
+\]
+where $\Gamma(\mu, \nu)$ denotes the collection of all measures on $M \times M$ with marginals $\mu$ and $\nu$ on the first and second factors, respectively. A transport plan $\gamma$ is a probability measure on $M \times M$ that tells how much mass from point $x_1$ is moved to point $x_2$.
+\end{definition}
+
+This notion allows defining a distance between two embedded submanifolds of $M$, with the Riemannian metric associated to their embedding $f$. We consider the 2-Wasserstein distance associated with the corresponding distributions, interpreted as singular distributions in $M$. This notion of distance is the evaluation metric used to compare weighted submanifold learning techniques.
+
+
+\subsection{Fr\'echet Mean}
+
+\begin{definition}[Fr\'echet Mean]
+Let $X$ be a random variable taking values on a manifold $M$ with probability distribution $p$.
+
+The \emph{population Fr\'echet mean} is defined as
+\[
+\mu = \arg\min_{y \in M} \int_M d_M^2(x,y) \, dp(x).
+\]
+
+Given a random sample $X_1,\dots,X_n$ on $M$, the \emph{sample Fr\'echet mean} is defined as
+\[
+\bar x = \arg\min_{y \in M} \frac{1}{n} \sum_{i=1}^n d_M^2(y, x_i).
+\]
+\end{definition}
+
+\section{Proof of Proposition 1}
+
+\subsection{Preliminaries}
+
+We begin by introducing notations. For $T \in \mathbb R^*_+$, we denote by $\mu_T$ the standard multivariate normal in $\mathbb{R}^L$ truncated at a distance $T$ from the origin. We write $B_T$ for the closed ball of $\mathbb{R}^L$ of radius $T$, which is a compact subset of $\mathbb{R}^L$ as it is bounded and closed in $\mathbb{R}^L$.
+
+We write $C(\mathbb{R}^L,\mathbb{R}^D)$ for the set of continuous functions from $\mathbb{R}^L$ to $\mathbb{R}^D$, and we write $C(B_T,\mathbb{R}^D)$ for the set of continuous functions from $B_T$ to $\mathbb{R}^D$.
+
+We first introduce a lemma that generalizes a result from~\cite{hornik1991approximation} to functions in $D$ dimensions.
+
+\begin{lemma}\label{lemma:d_approx}
+Consider $K$ a compact subset of $\mathbb{R}^L$. For any $\epsilon > 0$ and any continuous function $f \in C(K,\mathbb{R}^D)$, there exists a neural network represented by the function $f_\theta$, parameterized by $\theta$, such that:
+\[
+\sup_{z \in K} \| f(z) - f_\theta(z) \|_2^2 < D\epsilon^2.
+\]
+\end{lemma}
+
+\begin{proof}
+Take $\epsilon > 0$. For each $d \in \{1,\dots,D\}$, consider $f_d$, the $d$-th component of $f \in C(K,\mathbb{R}^D)$. Then $f_d \in C(K,\mathbb{R})$. From the results of \cite{hornik1991approximation}, there exists a neural network that approximates $f_d$ with precision $\sqrt\epsilon$.
+
+In our notations, $L$ is the dimension of the input space (as opposed to $k$ in \cite{hornik1991approximation}), $z \in \mathbb{R}^L$ is an input element, and $K$ is the number of hidden units (as opposed to $n$ in \cite{hornik1991approximation}). We define:
+\[
+M^{(K)}_L(\psi) = \Big\{ h : \mathbb{R}^L \to \mathbb{R} \,\big|\,
+h(z) = \sum_{k=1}^K \beta_k \, \psi(a_k'z - \theta_k) \Big\},
+\]
+the space of functions represented by a fully connected neural network with one output unit and one hidden layer with $K$ hidden units, where $\psi$ is the activation function. Then define
+\[
+M_L(\psi) = \bigcup_{K=1}^{+\infty} M^{(K)}_L(\psi),
+\]
+the space of functions represented by one-hidden-layer fully connected networks with any number of hidden units. We assume $\psi$ is continuous, bounded, and nonconstant (for example, the sigmoid).
+
+By Theorem 2 of \cite{hornik1991approximation}, $M_L(\psi)$ is dense in $C(K,\mathbb{R})$. Thus, for each $f_d \in C(K,\mathbb{R})$, there exists $h_d \in M_L(\psi)$ such that:
+\[
+\sup_{z \in K} |f_d(z) - h_d(z)| < \epsilon.
+\]
+
+We fix functions $h_1,\dots,h_D$ approximating the $D$ components of $f$. We define $h = (h_1,\dots,h_D) : \mathbb{R}^L \to \mathbb{R}^D$. Then
+\begin{align*}
+\sup_{z\in K}\,\| f(z) - h(z) \|_2^2
+&= \sup_{z\in K}\,\sum_{d=1}^D |f_d(z) - h_d(z)|^2\\
+&\le \sum_{d=1}^D \sup_{z\in K} |f_d(z) - h_d(z)|^2\\
+&< D\,\epsilon^2.
+\end{align*}
+
+
+Thus, $f$ can be approximated by the neural network $h$ with precision $\epsilon$, obtained by combining the networks defining $h_d$, $d=1,\dots,D$.
+\end{proof}
+
+\begin{proposition}
+
+Let \((N_T,\nu_T)\) be a weighted Riemannian submanifold of \(M\), embedded in a submanifold \(L\subset M\) that is homeomorphic to \(\mathbb{R}^L\). Suppose there exists an embedding \(f^M:\mathbb{R}^L\to L\) such that \(\nu_T=(f^M)_*\mu_T\), where \(\mu_T\) is the standard Gaussian on \(\mathbb{R}^L\) truncated to the ball \(B_T\). Assume there exists \(\mu\in M\) with \(N\subset V(\mu)\), where \(V(\mu)\) is the maximal domain on which the Riemannian exponential map \(\mathrm{Exp}_\mu^M\) is a global bijection. Then, for any \(0<\epsilon<1\), there exists a Riemannian VAE with decoder given by a neural network \(f^M_\theta\) (parameterized by \(\theta\)) such that
+
+\[
+d_2^2\bigl(N_T,\,N_{\theta,T}\bigr)\;<\;C^2_{T,D}\,D\epsilon^{2},
+\]
+where \(d_2\) denotes the \(2\)-Wasserstein distance, \(C_{T,D}>0\) depends only on \(T\) and the dimension \(D\), and
+
+\[
+    (N_{\theta,T}, \nu_{\theta,T}) \;=\;\bigl(f^M_\theta(\mathbb{R}^L),\, (f^M_\theta)_* \mu_T\bigr),
+\]
+
+\end{proposition}
+
+\paragraph{Explanation}
+We have a target geometric--probabilistic object \((N_T,\nu_T)\): a submanifold \(N_T\subset M\) together with a probability measure \(\nu_T\) supported on it (a “weighted submanifold”). It sits inside another submanifold \(L\subset M\) that is homeomorphic (the same shape topologically) to \(\mathbb{R}^L\). This supplies a convenient flat parameter space. There is an embedding \(f^M:\mathbb{R}^L\to L\) whose pushforward of a truncated standard Gaussian \(\mu_T\) equals \(\nu_T\):
+\[
+(f^M)_*\mu_T=\nu_T.
+\]
+Equivalently, if \(z\sim \mu_T\) in \(\mathbb{R}^L\) and \(x=f^M(z)\), then \(x\) has distribution \(\nu_T\).
+
+We assume there exists a base point \(\mu\in M\) such that \(N\subset V(\mu)\), where \(V(\mu)\) is the maximal domain on which the Riemannian exponential map \(\mathrm{Exp}_\mu^M\) is a global bijection. Practically, geodesic coordinates from \(\mu\) are well behaved on the whole set (no self-overlap, no cut locus).
+
+
+For any accuracy level \(0<\epsilon<1\), there exists a Riemannian VAE with decoder given by a neural network \(f^M_\theta:\mathbb{R}^L\to L\) 
+with $L \subset M$  such that the model distribution
+
+\[
+    (N_{\theta,T}, \nu_{\theta,T}) \;=\;\bigl(f^M_\theta(\mathbb{R}^L),\, (f^M_\theta)_* \mu_T\bigr),
+\]
+
+
+is close to the target \((N_T,\nu_T)\) in quadratic Wasserstein distance:
+\[
+d_2^2\!\bigl(N_T,\,N_{\theta,T}\bigr)\;<\; C_{T,D}^2\,D\,\epsilon^{2}.
+\]
+Here \(C_{T,D}>0\) depends only on the truncation radius \(T\) and the output dimension \(D\).
+
+The two roles of \(f^M_\theta\) are:
+
+\begin{enumerate}
+  \item \textbf{Geometric mapping:} 
+  \[
+    f^M_\theta:\mathbb{R}^L \;\longrightarrow\; L \subset M.
+  \]
+  Its image is a submanifold inside \(M\), the candidate learned submanifold. 
+  In the notation
+  \[
+    (N_{\theta,T}, \nu_{\theta,T}) \;=\;\bigl(f^M_\theta(\mathbb{R}^L),\, (f^M_\theta)_* \mu_T\bigr),
+  \]
+  the first component is the geometric support.
+
+  \item \textbf{Measure transport:} 
+  At the same time, \(f^M_\theta\) pushes forward the latent distribution 
+  \(\mu_T\) (the truncated Gaussian in \(\mathbb{R}^L\)) to a distribution on \(L\):
+  \[
+    (f^M_\theta)_* \mu_T.
+  \]
+  This is the probabilistic weighting on the learned manifold.
+\end{enumerate}
+
+
+
+The embedding \(f^M\) already maps the simple latent \(\mu_T\) to the exact target \(\nu_T\). By universal approximation, a neural decoder \(f^M_\theta\) can approximate \(f^M\) uniformly well on the compact ball \(B_T\subset\mathbb{R}^L\). Uniform control on the map, combined with the tame geometry ensured by the exponential-chart assumption, yields control of transport cost, hence the  Wasserstein distance bound with a constant–times–squared–error form.
+
+
+\begin{proof}
+We can write $L = f^M(\mathbb{R}^L)$ the embedded submanifold of $M$, that contains $N_T: N_T \subset L = f^M(\mathbb{R}^L)$.
+Without loss of generality, we can restrict $N_T$ to the support of the singular probability distribution $\nu_T$.
+We write $N_T = f^M(B_T)$. As $B_T$ is compact and $f^M$ is continuous by definition of an embedding, we observe that
+$N_T$ is compact.
+
+As $N_T\subset V(\mu)$, we can define the function:
+
+\[
+\begin{aligned}
+f\colon B_T &\mapsto T_\mu M\\
+z &\mapsto f(z) = \mathrm{Log}_\mu f^M(z).
+\end{aligned}
+\]
+
+
+So, $f^M$ maps $\mathbb{R}^L$ to $L$ and $f$ maps it to tangent space at $\mu$ point of $M$.
+
+We have $f \in C(B_T,\mathbb{R}^D)$, where $B_T$ is a compact subset of $\mathbb{R}^L$. From Lemma~\ref{lemma:d_approx}, there exists 
+a neural network represented by $f_\theta$, such that:
+
+\[
+\sup_{z \in B_T} \| f(z) - f_\theta(z) \|_2^2 < D\epsilon^2.
+\]
+
+We introduce the weighted submanifold $(N_{\theta,T},\nu_{\theta,T})$ associated to the neural network 
+represented by $f_\theta$:
+
+\[
+(N_{\theta,T},\nu_{\theta,T}) \;=\;\bigl(f^M_\theta(B_T),\, (f^M_{\theta}|_{B_T})_* \mu_T\bigr),
+\]
+
+which corresponds to the generative model defining the Riemannian VAE. We show that $N_{\theta,T}$ can approximate $N_T$
+with a precision $\epsilon$, in terms of the 2-Wasserstein distance.
+
+By definition, the squared 2-Wasserstein distance between weighted submanifolds is the 2-Wasserstein distance between 
+the probability measures defined on them. Here, the probability distributions are $\nu_T$ and $\nu_{\theta,T}$, so we
+write:
+
+\[
+    d_2^2(N_T,N_{\theta,T}) =
+        \inf_{\gamma \in \Gamma(\nu_T, \nu_{\theta,T})}
+        \int_{N_T \times N_{\theta,T}}
+        d_M^2(x_1, x_2) \, d\gamma(x_1, x_2).
+\]
+
+Now, we consider the homeomorphism:
+
+\[
+\bigl((f^M)^{-1}, (f^M_\theta)^{-1}\bigr) : N_T \times N_{\theta,T} \mapsto B_T \times B_T
+\]
+
+which is a “global chart” of the submanifold $N_T \times N_{\theta,T}$ of $M \times M$.
+
+Now, we perform the change of variables $(x_1, x_2)=(f^M(z_1), f^M_\theta(z_2))$ to represent 
+point $(x_1,x_2)$. We get:
+
+\[
+    d_2^2(N_T,N_{\theta,T}) =
+        \inf_{\gamma \in \Gamma(\mu_T, \mu_T)}
+        \int_{B_T \times B_T}
+        d_M^2(f^M(z_1), f^M_\theta(z_2)) \, d\gamma(z_1, z_2),
+\]
+
+where the probability density $\gamma$ is expressed in this chart:
+
+\[
+ d\gamma(z_1, z_2) = \gamma(z_1, z_2)dz_1dz_2,
+\]
+
+and we have $((f^M_\theta)^{-1})_*\nu_{\theta,T} = \mu_T$. We consider the following element $\tilde{\gamma}$ of $\Gamma(\mu_T, \mu_T)$:
+
+\[
+ \tilde{\gamma}(z_1,z_2) = \mu_T(z_1)\delta_{z1=z2} = \mu_T(z_2)\delta_{z1=z2}.
+\]
+
+So, $\tilde{\gamma}$ is the identity coupling: all the mass at $z_1$ in the first copy is transported to exactly the same point 
+$z_2$ in the second copy and it is the canonical “do nothing” transport plan.
+
+By the property of the $\mathrm{inf}$, we get the upper bound:
+
+\[
+\begin{aligned}
+d_2^2(N_T,N_{\theta,T})
+   &\le \int_{B_T \times B_T}
+        d_M^2\!\bigl(f^M(z_1), f^M_\theta(z_2)\bigr) \, d\tilde{\gamma}(z_1, z_2) \\[6pt]
+   &= \int_{B_T}
+        d_M^2\!\bigl(f^M(z), f^M_\theta(z)\bigr) \, d\mu_T(z).
+\end{aligned}
+\]
+
+We define compact $K$ of $T_\mu M$ as the compact $f(B_T)$ extended in $L_2$ norm by a distance $\sqrt D$ in 
+all directions. We have, for any $z \in B_T : f(z) \in f(B_T) \subset K$ and $f_\theta(z) \in K$. 
+The Riemannian exponential $\mathrm{Exp}(\mu,\bullet)$ is continuous on the compact $K$, and therefore Lipshitz on $K$. 
+There exists constant $C_{T,D}$ such that for any $y_1, y_2 \in K$, we have:
+
+\[
+d_M(\mathrm{Exp}(\mu,y_1), \mathrm{Exp}(\mu,y_2)) < C_{T,D}\|y_1-y_2\|_2.
+\]
+
+In simple terms: if we start at the same base point $\mu$, take two tangent vectors 
+$y_1, y_2$, and map them to the manifold with the exponential map, then the distance 
+between the two resulting points on the manifold cannot grow faster than a constant 
+multiple of the Euclidean distance between the vectors in the tangent space.
+
+So the exponential map behaves in a ``well-controlled'' way on this compact region: 
+it will not blow up small differences in tangent space into huge differences on the 
+manifold. The constant $C_{T,D}$ is the quantitative bound that guarantees this control.
+
+We apply this to $y_1 = f(z)$ and $y_2 = f_\theta(z)$ for any $z \in B_T$, and taking square:
+
+\[
+\begin{aligned}
+d_M^2(\mathrm{Exp}(\mu,f(z)), \mathrm{Exp}(\mu,f_\theta(z))) &< C^2_{T,D}\|f(z)- f_\theta(z)\|^2_2\\[6pt]
+\implies d_M^2(f^M(z), f^M_{\theta}(z)) &< C^2_{T,D}\|f(z)- f_\theta(z)\|^2_2\\[6pt]
+\implies d_M^2(f^M(z), f^M_{\theta}(z)) &< C^2_{T,D}\sup_{z \in B_T} \| f(z) - f_\theta(z) \|_2^2\\[6pt]
+\implies d_M^2(f^M(z), f^M_{\theta}(z)) &< C^2_{T,D}D\epsilon^2.
+\end{aligned}
+\]
+
+We integrate left side using the measure $\mu_T$, and write:
+
+\[
+\begin{aligned}
+d_2^2(N_T,N_{\theta,T}) &< \int_{\mathbb{R}_L} d_M^2(f^M(z), f^M_{\theta}(z))d\mu_T(z)\\[6pt]
+&< \int_{\mathbb{R}_L} C^2_{T,D}D\epsilon^2 d\mu_T(z)\\[6pt]
+&< C^2_{T,D}D\epsilon^2.
+\end{aligned}
+\]
+
+Therefore, for any $T$, any weighted submanifold $N_T$ verifying the assumptions can be approximated by a submanifold
+$N_{\theta,T}$ generated by the model of a Riemannian VAE.
+
+\end{proof}
+\bibliographystyle{unsrt}
+\bibliography{references}
+
+\end{document}

@@ -1,0 +1,795 @@
+
+% IEEE Transactions on Biomedical Engineering
+% Journal of Neuroengineering rehabilitation
+% IEEE Transactions on Neural Systems and Rehabilitation Engineering 28 
+
+
+\documentclass{article}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{geometry}
+\usepackage{longtable}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage{graphicx}
+\newgeometry{left=2cm,bottom=2cm}
+\title{Jointly Registering EMG and Motion Shapes for Understanding Motor Function in Stroke}
+\author{Shashwat Kumar}
+\date{April 2024}
+
+
+
+
+\newcommand{\anuj}[1]{\textcolor{red}{anuj: #1 \\}}
+\newcommand{\shashwat}[1]{\textcolor{blue}{shashwat: #1 \\}}
+\newcommand{\arafat}[1]{\textcolor{green}{arafat: #1 \\}}
+\newcommand{\laura}[1]{\textcolor{violet}{laura: #1 \\}}
+
+\begin{document}
+
+\maketitle
+% \shashwat{Plot emg and kinematic together}
+% \shashwat{Plot emg and kinematic together after resampling}
+% \shashwat{Try warping from kinematic on emg, does it lead to better registration for emg, else use raw}
+% \shashwat{Play around with seminmf test code, share with Arafat. Try it on tangent vectors + emg warped signals}
+
+% Shashwat
+
+% Key ones to verify in pca
+% scalings, left arm variation, left elbow, right shoulder
+
+
+% 1 is still significant in separating stroke vs healthy, not much in asymmetry
+% 7: left body variation, significant (left vs right)
+% 9: left elbow variation, significant (left vs right)
+% 14: right shoulder variation all significant
+% 11: hip (ns)
+
+% Hemiplegic mean captured
+% Mode 1 is scaling, Mode 7 is left side variation, 9 is elbow while 14 is shoulder variation. 7,9,14 good for left vs right
+
+% Arafat
+
+\begin{abstract}
+    In order to understand a patient's progress post rehabilitation in stroke, it's important to focus on both motion (kinematic) and electrical activity of muscles (emg), both form and function. Joint analysis of both modalities can reveal abnormal  muscle activity patterns or movement patterns like spastic gait, which are hard to obtain from a single modality. Recent data collection setups have started getting patients to perform free form motion at their natural speed which leads to variability across participants at the rate of walking. Different initial configurations, joint sizes can lead to confounders which obscure the latent structure in the data and make it hard to perform simple tasks like averaging time series or performing pca with such data. In this work, we present a method for jointly registering kinematic and emg signals by embedding these trajectories in kendall shape space and srvf space, thus obtaining periodic functions for kinematic and emg representing gait.  We run functional principal component to identify interpretable modes of variation from the mean gait which is useful to separate healthy from hemiplegic gait with an F1 score of 0.92, identifies asymmetry in side of stroke and also is correlated with baseline measures like POMA and FAC. The registration method outperforms previous registration methods (based on procrustes/dynamic time warping). Registration improves F1 scores by 0.2 for kinematic and 0.35 for EMG.
+\end{abstract}
+
+
+\section{Introduction}
+% \shashwat{This can be a useful intro for thesis slides as well, comparing will help contextualize the results}
+Stroke affects more than 795,000 patients per year. To understand post rehabilitation function in stroke patients, it's crucial to analyze both motion and muscle activity, encompassing both ``form" and ``function". Relying on a single modality is insufficient for a comprehensive assessment. For example, consider a stroke patient with good kinematic data but poor EMG activity. This patient might exhibit smooth and efficient walking patterns, suggesting good functional recovery. However, the EMG data could reveal underlying neurochemical deficiencies or abnormal muscle activation patterns that aren't apparent through kinematic analysis alone. Conversely, another stroke patient might have poor kinematic data but good EMG activity. This patient could show irregular, spastic gait patterns, indicating poor functional recovery. Nonetheless, the EMG data might demonstrate strong and normal muscle activation, suggesting that the muscles themselves are functioning well but the control and coordination aspects are impaired. Therefore, a joint analysis of both kinematic and EMG data provides deeper insights into the patient's condition, revealing nuances that might be missed when focusing on only one modality.
+
+
+% Stroke affects more than 795,000 patients per year. In order to understand function in stroke, it's important to analyze both kinematic and emg data, both control and function. This is because one modality on it's own is insufficient. Focusing on kinematic "function" might not reveal anything about the subtle neurochemical muscle activity signals because patients might be able to walk with good function despite having poor emg activity. Furthremore, emg itself might not be sufficient since stroke patients can have good walking despite having a spastic gait. Thus a joint analysis can give deeper insights than focusing solely on one modality.
+
+Several studies have focused on analyzing stroke kinematic data (\cite{van2023full}). A common choice of study design is to allow participants to perform the motion naturally, to not constrain their motion. However this can lead to phase variability in the dataset, since different patients might perform the motion at different speeds. Furthermore, since the setup does not involve a treadmill, there can be translation/rotation variability where same motion shapes with different starting configurations relative to camera can have different sensor signals. Finally, variation in participant sizes can cause kinematic patterns with same shapes to have different norm of signals. 
+
+Similarly, emg data also suffers from phase variability depending on walking speed of the participant. An example of this is shown in Figure 1, first column, where despite the kinematic and emg signals being generate by a periodic walking pattern, it's hard to see any periodic structure in the raw data. The presence of rotation/translation/scale/phase variability in kinematic and phase variability in emg make it challenging to see any periodic structure in the raw data.
+
+
+In our current work, we use techniques from statistical shape analysis to the problem of identifying differences between hemiplegic vs normal gaits based on jointly registering both kinematic and emg modalities. In particular, we focus on the following research questions:
+
+Given we have freeform kinematic data with phase/scale/rotation/translation variability $X_{kin}$, EMG data with phase variability $X_{emg}$.
+
+\begin{enumerate}
+    \item How do we perform registration of such complex biomechanical data to eliminate nuisance variables like rotations and temporal rates of actions?
+    \item How do we summarize the high dimensional biomechanical data to useful and interpretable modes of variation?
+    \item How can we come up with an interpretable classifier (with features which themselves can be visualized as skeletol sequences) to separate hemiplegic gait from normal with features automatically discovered from data?
+\end{enumerate}
+% The applications of such a technology? How much a clinician use such a technology?
+
+\section{Related Work}
+There is a rich body of literature on using Dynamic Time Warping in the context of stroke. 
+\cite{tormene2009matching} used a real-time variant of the dynamic time warping (DTW) algorithm for motor exercise recognition, particularly in the context of neurological rehabilitation. The algorithm provides real-time feedback to neurological patients during motor rehabilitation sessions. \cite{lee2019application} investigated the effectiveness of dynamic time warping (DTW) in analyzing gait pattern similarity, aiming to address a gap in its application within gait research. \cite{Zhang2016Objective} used DTW distance to objectively measure upper limb mobility post-stroke. They found a reference signal by averaging motion samples collected from rehabilitation experts and determined the DTW distance between this reference motion and stroke patient's motion. \cite{Bonnyaud2020Locomotor} used locomotion trajectories during the Timed Up and Go (TUG) test to differentiate motion quality between stroke and healthy patients. Several other works have focused on using Dynamic Time Warping \cite{chakraborty2020functional,kashi2020machine,li2023stiff,Zhang2016Objective}, removing rotation, translation, and scaling variability has received less attention. Some approaches have focused on combining DTW with rotations, but this approach faces challenges when performing PCA with the data because DTW is not a proper metric distance. Rotational data lies on non-Euclidean manifolds, where the absence of a global vector space makes it challenging to extend the notion of PCA. A recent line of work \cite{amor2015action,hosni20183d} has tried to address this by performing PCA in the tangent space of manifolds. We extend this approach in our paper.
+
+
+% \textbf{Dynamic time warping can struggle with rotations}
+
+% \subsection{Baseline Comparisons}
+% \shashwat{These are some comparisons for registration/classification}
+% 3D motion capture system for assessing
+% patient motion during Fugl-Meyer stroke
+% rehabilitation testing
+
+% https://ietresearch.onlinelibrary.wiley.com/doi/pdfdirect/10.1049/iet-cvi.2018.5274
+
+% Automated Assessment of Upper Extremity Movement Impairment due to Stroke
+
+% https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0104487&type=printable
+
+% https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8678529/pdf/fnhum-15-731677.pdf
+
+% https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=7592132
+
+% https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=7592132
+
+% https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=7244204
+
+% \textbf{Amors papers on gait recognition}
+
+\section{Methodology}
+
+\subsection{Riemannian VAE}
+\shashwat{Define the VAE decoder map, is the VAE used to parameterize a tangent vector on the Shape Manifold?}
+\shashwat{Define the generative model (write down the probability distribution/sampling process)}
+\shashwat{Write down the Riemannian geometry of the manifold in our case. Lay out log map and exponential map.}
+\shashwat{Any other lemmas or proofs we wish to add}
+
+
+% Why the problem is challenging methodologically
+\shashwat{Don't do any EMG, get rid of bottom half of figure}
+\begin{figure}
+    \includegraphics[width=0.99\textwidth]{figures/Figure1.pdf}
+    % \includegraphics[width=0.23\textwidth]{figures/eu_dtw_mean_skeleton/euclidean_dtw_mean3.png}
+    % \includegraphics[width=0.23\textwidth]{figures/eu_dtw_mean_skeleton/euclidean_dtw_mean4.png}
+    \caption{a) Action of nuisance groups (rotation/translation/scaling/reparameterizations) obfuscates the latent periodic structure in the data and makes it challenging to perform simple tasks like computing means. b) Registering raw data with our method allows us to see this structure as well as analyze both kinematic and muscle activity shapes.}
+    \label{fig:means}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.99\textwidth]{figures/registration_beautiful.png}
+    \caption{Example of kinematic registration.}
+    \label{fig:overview}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.99\textwidth]{figures/sphere_interpolation.png}
+    \caption{Example of tsrvf construction and trajectory interpolation on a Sphere Manifold.}
+    \label{fig:tsrvf_sphere}
+\end{figure}
+
+% \shashwat{Add a schematic figure, showing scale/phase/rotation/translation variability, also make a problem diagram similar to nature medicine paper}
+
+% Example from registration
+% \begin{figure}
+%     \centering
+    
+    
+%     % \includegraphics[width=0.19\textwidth]{figures/skeleton_registration1.png}
+%     % \includegraphics[width=0.30\textwidth]{figures/skeleton_registration2.png}
+%     % \includegraphics[width=0.30\textwidth]{figures/skeleton_registration3.png}
+    
+    
+%     \caption{a) Example of alignment of 3 skeleton sequences b) Registration on whole skeleton and first landmark [Left Forehead (LFHD)] plot.}
+%     \label{fig:registration_all}
+% \end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.115\textwidth]{figures/align_comparison/cropped_frame_1.png}
+    \includegraphics[width=0.115\textwidth]{figures/align_comparison/cropped_frame_2.png}
+    \includegraphics[width=0.115\textwidth]{figures/align_comparison/cropped_frame_3.png}
+    \includegraphics[width=0.115\textwidth]{figures/align_comparison/cropped_frame_4.png}
+    \includegraphics[width=0.115\textwidth]{figures/align_comparison/cropped_frame_5.png}
+        \includegraphics[width=0.115\textwidth]{figures/align_comparison/cropped_frame_6.png}
+    \includegraphics[width=0.115\textwidth]{figures/align_comparison/cropped_frame_7.png}
+    \includegraphics[width=0.115\textwidth]{figures/align_comparison/cropped_frame_8.png}
+    \caption{Comparison of registration with \cite{eichler20183d}.}
+    \label{fig:registration_all}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/pairwise_dist.png}
+    \caption{Pairwise distances, block structure in healthy possibly because easier to register healthy to another healthy. Middle is registration from \cite{eichler20183d}.}
+    \label{fig:registration_distances}
+\end{figure}
+
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.3\textwidth]{figures/mds_dist_kendall.png}
+    \includegraphics[width=0.25\textwidth]{figures/mds_badframe_6.png}
+    \includegraphics[width=0.22\textwidth]{figures/md_goodframe_5.png}
+    \caption{14, 10, 36 are stroke patients close to healthy, 42, 34, 2 are stroke patients far from healthy.}
+    \label{fig:registration_mds}
+\end{figure}
+
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.115\textwidth]{figures/mean_frame_comparison/mean_frame_1.png}
+    \includegraphics[width=0.115\textwidth]{figures/mean_frame_comparison/mean_frame_2.png}
+    \includegraphics[width=0.115\textwidth]{figures/mean_frame_comparison/mean_frame_3.png}
+    \includegraphics[width=0.115\textwidth]{figures/mean_frame_comparison/mean_frame_4.png}
+    \includegraphics[width=0.115\textwidth]{figures/mean_frame_comparison/mean_frame_5.png}
+    \includegraphics[width=0.115\textwidth]{figures/mean_frame_comparison/mean_frame_6.png}
+    \includegraphics[width=0.115\textwidth]{figures/mean_frame_comparison/mean_frame_7.png}
+    \includegraphics[width=0.115\textwidth]{figures/mean_frame_comparison/mean_frame_8.png}
+    \caption{Mean calculation from registered curves. Stroke mean shown in red while healthy shown in blue. Hemiplegic show dragging.}
+    \label{fig:means}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.18\textwidth]{figures/pc_snapshots/pc1.png}
+    \includegraphics[width=0.18\textwidth]{figures/pc_snapshots/pc7.png}
+    \includegraphics[width=0.16\textwidth]{figures/pc_snapshots/pc9.png}
+    \includegraphics[width=0.15\textwidth]{figures/pc_snapshots/pc14.png}
+    
+    % \includegraphics[width=0.18\textwidth]{figures/pc_mode2.png}
+    % \includegraphics[width=0.18\textwidth]{figures/pca_mode3.png}
+    % \includegraphics[width=0.18\textwidth]{figures/pc_mode5.png}
+    % \includegraphics[width=0.18\textwidth]{figures/pc_mode_11.png}
+    
+    % \includegraphics[width=0.18\textwidth]{figures/pc_mode1.png}
+    % \includegraphics[width=0.18\textwidth]{figures/pc_mode2.png}
+    % \includegraphics[width=0.18\textwidth]{figures/pca_mode3.png}
+    % \includegraphics[width=0.18\textwidth]{figures/pc_mode5.png}
+    % \includegraphics[width=0.18\textwidth]{figures/pc_mode_11.png}
+    \caption{Pca modes 1 (short stride + stiffer limbs + head position up or down),7 (left arm variability), 9 (elbow variation), 14 (Right Shoulder variation). 7, 9 and 14 seem to capture differences between stroke left and right}
+    \label{fig:pca_modes}
+\end{figure}
+\shashwat{How do the Riemannian VAE modes look? Do they look different from PCA modes? How powerful is the latent representation learnt by them. Synthesize trajectories.}
+
+% \arafat{We should add multiple frames here to show motion}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/mean_boxplot.png}
+    \caption{Boxplots showing separation between healthy and stroke via pcs}
+    \label{fig:mean_boxplot}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.99\textwidth]{figures/mean_cross_correlation.png}
+    % \includegraphics[width=0.99\textwidth]{figures/cross_correlation/cross_crrorelation.png}
+    \caption{Correlation of demographic with pcs}
+    \label{fig:correlation}
+\end{figure}
+
+
+
+\subsection{Kendall Shape Space based transported srvf formulation}
+
+Given kinematic data, we represent each skeleton frame as a matrix of $k$ landmarks storying $m=3$ xyz coordinates of each joint in the body.
+We consider the space of $m \times k$ matrices representing our k landmarks. 
+
+\begin{equation}
+    X \epsilon \mathbb{R}^{m \times k}
+\end{equation}
+
+These matrices are acted upon by the group of translations, scaling and rotations. In order to compute shape distance between skeletons, we need to remove the action of these nuisance groups.
+
+% \begin{equation}
+%     G = R^{+} \times R^{m} \times O(3)
+% \end{equation}
+
+We mean center these matrices to remove translation as a degree of freedom. This yields a new vector space where translation has been quotiented out. 
+
+\begin{equation}
+    V_m^k = \{X \epsilon \mathbb{R}^{m \times k}: \sum_{i=1}^{k} X[:,i] = 0 \}
+\end{equation}
+
+Scaling is quotiented out by imposing the unit frobenius norm constrain \begin{equation}
+    S_m^k = \{X \epsilon V_m^k :  \lVert X \rVert_2 = 1 \}
+\end{equation}.
+
+Because of the unit norm constraints, the preshape space has a spherical geometry.
+
+
+Since translations and scalings have been quotiented out, our landmark matrices lying in $S_m^k$ are acted upon by a group of rotations.
+
+\begin{equation}
+    \mathcal{SO}(3) = \{ R \in \mathbb{R}^{3 \times 3} \mid R^T R = I, det(R) = 1 \}
+\end{equation}.  
+
+We define an equivalence relation between two skeletons $X_1, X_2 \epsilon S_m^n$ \( X_1 \sim X_2 \) if and only if \( X_2 = R X_1 \)
+
+This allows us to define the shape space as a quotient space under this equivalence relation
+
+\begin{equation}
+    \Sigma_m^k = S_m^n / \sim
+\end{equation}
+
+For points away from singularities, the quotient map is a Riemannian Submersion. This allows us to define geodesics and the distance between two shapes $p_1, p_2 \epsilon \Sigma_m^n$ can be defined as
+\begin{equation}
+    d(p_1,p_2) = inf_{R} d(X_1, R * X_2)
+\end{equation}
+
+Where d is the geodesic distance on the sphere. Orthogonal Procrustes Analysis for alignment is used to find the solution to this problem.
+
+\textbf{TSRVF distance}
+Let $\beta_j^{\text{kin}}(t): [0, 1] \rightarrow \Sigma$ represent a collection of kinematic trajectories lying on a manifold $\Sigma$, and $\beta_j^{\text{emg}}(t): [0, 1] \rightarrow \mathbb{R}^n$ represent a collection of EMG trajectories in Euclidean space. We choose a reference trajectory $c \in \Sigma$.
+
+We first use numerical differentiation to calculate the covariant derivative for each kinematic trajectory and simple differences for each EMG trajectory, followed by the computation of the joint SRVF.
+
+\begin{algorithm}
+\caption{Covariant Derivative and Transported Joint SRVF Calculation}
+\begin{algorithmic}[1]
+\STATE \textbf{Input:} Collection of kinematic trajectories $\{\beta_j^{\text{kin}}(t)\}$, collection of EMG trajectories $\{\beta_j^{\text{emg}}(t)\}$, reference trajectory $c$
+\FOR{each trajectory $\beta_j^{\text{kin}}(t)$ and $\beta_j^{\text{emg}}(t)$}
+    \STATE Calculate $\dot{\beta}_j^{\text{kin}}(t)$ using numerical differentiation:
+    \[
+    \dot{\beta}_j^{\text{kin}}(t) \approx \left( \frac{\log_{\beta_j^{\text{kin}}(t)}(\beta_j^{\text{kin}}(t+\Delta t))}{\Delta t}\right)_{\beta_j^{\text{kin}}(t) \rightarrow c}
+    \]
+    \STATE Calculate $\dot{\beta}_j^{\text{emg}}(t)$ via difference:
+    \[
+    \dot{\beta}_j^{\text{emg}}(t) \approx \frac{\beta_j^{\text{emg}}(t+\Delta t) - \beta_j^{\text{emg}}(t)}{\Delta t}
+    \]
+    \STATE Form the joint derivative $\dot{\beta}_j^{\text{joint}}(t)$:
+    \[
+    \dot{\beta}_j^{\text{joint}}(t) = \begin{pmatrix}
+    \dot{\beta}_j^{\text{kin}}(t) \\
+    \dot{\beta}_j^{\text{emg}}(t)
+    \end{pmatrix}
+    \]
+    \STATE Calculate the joint SRVF $q_j(t)$:
+    \[
+    q_j(t) = \left(\frac{\dot{\beta}_j^{\text{joint}}(t)}{\sqrt{\lVert \dot{\beta}_j^{\text{joint}}(t) \rVert}}\right)
+    \]
+\ENDFOR
+\STATE \textbf{Output:} Joint SRVF representations $\{q_j(t)\}$
+\end{algorithmic}
+\end{algorithm}
+
+Given a joint SRVF $q_j$, we can recover the kinematic and EMG trajectories $\beta_j^{\text{kin}}$ and $\beta_j^{\text{emg}}$ via covariant integration with the initial condition starting from reference $c$.
+
+\begin{algorithm}
+\caption{Trajectory Recovery}
+\begin{algorithmic}[1]
+\STATE \textbf{Input:} Joint SRVF $q_j(t)$, reference trajectory $c$
+\STATE Initialize $\beta_j^{\text{kin}}(0) = c$
+\FOR{each time step $t$}
+    \STATE Calculate the joint derivative $\dot{\beta}_j^{\text{joint}}(t)$:
+    \[
+    \dot{\beta}_j^{\text{joint}}(t) = q_j(t) \lVert q_j(t) \rVert
+    \]
+    \STATE Extract the kinematic and EMG components:
+    \[
+    \dot{\beta}_j^{\text{kin}}(t) = \dot{\beta}_j^{\text{joint}, \text{kin}}(t)
+    \]
+    \[
+    \dot{\beta}_j^{\text{emg}}(t) = \dot{\beta}_j^{\text{joint}, \text{emg}}(t)
+    \]
+    \STATE Update the kinematic trajectory:
+    \[
+    \beta_j^{\text{kin}}(t+\Delta t) = \exp_{\beta_j^{\text{kin}}(t)} \left( \dot{\beta}_j^{\text{kin}}(t)_{c \rightarrow \beta_j^{\text{kin}}(t)} \Delta t \right)
+    \]
+    \STATE Update the EMG trajectory:
+    \[
+    \beta_j^{\text{emg}}(t+\Delta t) = \beta_j^{\text{emg}}(t) + \dot{\beta}_j^{\text{emg}}(t) \Delta t
+    \]
+\ENDFOR
+\STATE \textbf{Output:} Recovered kinematic and EMG trajectories $\{\beta_j^{\text{kin}}(t)\}$ and $\{\beta_j^{\text{emg}}(t)\}$
+\end{algorithmic}
+\end{algorithm}
+
+We perform the mean calculation based on the joint SRVF.
+
+\begin{algorithm}
+\caption{Mean Calculation}
+\begin{algorithmic}[1]
+\STATE Initialize $\mu_{\beta^{\text{kin}}} = \beta_1^{\text{kin}}$ and $\mu_{\beta^{\text{emg}}} = \beta_1^{\text{emg}}$
+\STATE Calculate initial joint SRVF $\mu_q(t) = \text{tsrvf}(\mu_{\beta^{\text{kin}}}, \mu_{\beta^{\text{emg}}})$
+\REPEAT
+    \FOR{each joint trajectory $\beta_j^{\text{kin}}(t)$ and $\beta_j^{\text{emg}}(t)$}
+        \STATE Minimize:
+        \[
+        \min_{\gamma_j} \sum \lVert \mu_q - q_j \circ \gamma_j \sqrt{\dot{\gamma}_j} \rVert_2^2
+        \]
+        \STATE Update $\hat{\beta}_j^{\text{kin}}$ and $\hat{\beta}_j^{\text{emg}}$:
+        \[
+        \hat{\beta}_j^{\text{kin}} = \beta_j^{\text{kin}} \circ \gamma_j
+        \]
+        \[
+        \hat{\beta}_j^{\text{emg}} = \beta_j^{\text{emg}} \circ \gamma_j
+        \]
+    \ENDFOR
+    \STATE Update $\mu_{\beta^{\text{kin}}}(t)$ and $\mu_{\beta^{\text{emg}}}(t)$:
+    \[
+    \mu_{\beta^{\text{kin}}}(t) = \exp \left( \frac{\sum \epsilon \log_{\mu_{\beta^{\text{kin}}}(t)} \hat{\beta}_j^{\text{kin}}(t)}{N} \right)
+    \]
+    \[
+    \mu_{\beta^{\text{emg}}}(t) = \frac{\sum \hat{\beta}_j^{\text{emg}}(t)}{N}
+    \]
+\UNTIL{convergence}
+\STATE \textbf{Output:} Mean trajectories $\mu_{\beta^{\text{kin}}}(t)$ and $\mu_{\beta^{\text{emg}}}(t)$
+\end{algorithmic}
+\end{algorithm}
+
+We start by setting $\mu_{\beta^{\text{kin}}} = \beta_1^{\text{kin}}$ and $\mu_{\beta^{\text{emg}}} = \beta_1^{\text{emg}}$.
+
+\section{Results}
+
+
+In Figure \ref{fig:overview}, first column, we show unregistered kinematic (first landmark, x coordinate) and EMG data across all participants. Due to action of nuisance groups (rotations/translations/scaling/phase in kinematic, phase in EMG), the data shows no periodic structure despite being generated by a periodic gait. We embed the trajectories in joint shape space (middle column), where each trajectory is aligned to its mean shape. This results in a periodic kinematic and EMG trajectory (right column).
+
+In Figure \ref{fig:tsrvf_sphere}, We illustrate the transported srvf by first simulate a trajectory on a sphere. We calculate a covariant derivative as described in the methods and then parallel transport the vector field to the tangent space of a reference point \textbf{c}. The reconstruction is shown in the middle plot. The last plot shows geodesics between two random trajectories on the sphere.
+
+In Figure \ref{fig:registration_all}, we compare our results from one of the recent stroke recognition setups proposed in \cite{eichler20183d}. The original shape is shown in red while the other shape is shown in black. The registration algorithm has to match the black sequence with the red sequence, in order to compare these trajectories. A good registration algorithm will align these two to each other while not deforming the source skeleton sequence too much. We show our TSRVF registration in blue while the registration from \cite{eichler20183d} is shown in green. As seen here, the registration from \cite{eichler20183d} often differs in phase compared to the target sequence while our registration matches it quite accurately. This is further quantified in Table 1 where we compare our registration algorithm with previous methods for computing distances/registering stroke biomechanical trajectories.
+
+In Figure \ref{fig:registration_distances}, we compute pairwise distances based on DTW distance (left), distance from \cite{eichler20183d} (middle), and Kendall shape distance (right). Numbers 0-49 indicate stroke patients while the remaining represent healthy. It's hard to make out any evidence of a cluster from the Euclidean or Procrustes registered distances. However, a clear block is evident from our registration distances. This can be further seen in Figure \ref{fig:registration_mds} where MDS identifies clear clusters of healthy and stroke patients along with identifying patients with the most extreme gait (14,10, and 36). Compare this to stroke patients with almost healthy gait (42,34, and 2).
+
+In Figure \ref{fig:means}, we use our registration to compute a mean for both the stroke and healthy cohorts individually. Some clear patterns are visible. The stroke mean has a shorter stride length and reduced knee flexion compared to the healthy patients. They also demonstrate lesser swaying of hands and a bent neck posture.
+
+In order to investigate this further, in Figure \ref{fig:pca_modes}, we use functional principal component analysis on the combined stroke and healthy registered biomechanical trajectories. We plot the mean trajectory in black while deviations of -1 std deviation and +1 std deviation are shown in blue and red. We point out several interesting PC modes while the remaining are shown in the appendix. The first PC mode seems to capture variation in scaling of participants, with the red skeleton showing a shorter stride length, stiffer arm sway, and a neck position which is bent down. As seen from \ref{fig:mean_boxplot}, this PC mode is especially effective in separating both left and right hemiplegic participants from healthy. As seen from Fig \ref{fig:correlation}, this PC mode is also correlated with two of the baseline metrics: The Functional Ambulatory Category (FAC) and the Tinetti Performance Oriented Mobility Assessment (POMA) with a correlation of 0.59 and 0.61 respectively.
+
+PC mode 7 seems to be associated with variability in left arm and trunk rotation while walking. It shows some separation between left and right hemiplegia and has a weak correlation with the Y variable LesionLeft, indicating whether the stroke is on the left or the right side of the body. PC mode 9 is particularly interesting, it's representing some form of elbow variation, shows clear separation between left vs right sided hemiplegia and has a correlation of 0.58 with LesionLeft.
+
+Finally, PC mode 14 seems to represent variation in the right shoulder as seen from the skeletal sequence.
+
+Next, we focus our attention on registration of the EMG. In Figure \ref{fig:emg_registration}, first two rows, we show raw EMG data processed with a Butterworth filter along with a root mean square transformation on a window of 50ms. The data appears to be really noisy without any apparent periodic pattern which would indicate it was generated by walking. Next, we run registration with phase variability and align each EMG function to the mean shape. Post-registration, it's a lot easier to see a periodic pattern in several of the muscle signals.
+
+In Figure~\ref{fig:emg_eigenfunctions}, we show the first PC eigenfunction associated with functional PCA of EMG. This eigenfunction seems to represent a global scaling of periodic activity of all the muscles. Further analysis reveals that this eigenfunction, similar to the first PC kinematic mode, is especially useful in separating hemiplegic from healthy.
+
+In Table \ref{other_comparison}, we show a comparison of our method with some previously published methods in the stroke kinematic quality assessment domain. Functional PCA Kendall outperforms other methods.
+
+In Figure \ref{fig:accuracy_comparison}, we show F1 scores for classification of Healthy vs Paretic Left vs Paretic Right for all the participants. A and B show the F1 score of kinematic, EMG, and a joint model built on top of the first R functional coefficients from both kinematic and EMG. The unaligned model performs much more poorly compared to the aligned one. In C and D, we show the same plot but here we evaluate the capacity of each PC dimension individually to perform classification. PC modes 1, 7, and 9 seem particularly interesting.
+
+Finally, in Table \ref{quantitative}, we compare our best performing method for Paretic vs Healthy classification to other models.
+
+\section{Discussion}
+This study introduces a novel method for analyzing biomechanical gait data that mitigates the influence of nuisance parameters like rotations and translations. This approach leverages joint shape space for alignment, enabling the extraction of the underlying periodic structure from kinematic and EMG data, revealing valuable information about gait patterns.
+
+The effectiveness of the method is demonstrated in two key ways. First, it achieves superior phase matching between source and target sequences compared to existing methods, leading to more accurate comparisons. Second, the registration facilitates the identification of distinct clusters separating healthy and stroke patients based on pairwise distance measures and Multi-Dimensional Scaling. This clear separation is crucial for effective diagnosis and analysis, which is often hampered by traditional registration methods.
+
+By applying this registration method and subsequent functional PCA on the gait data, we uncover clinically relevant gait characteristics that differentiate healthy individuals from stroke patients. The analysis reveals reduced knee flexion, shorter stride length, and less hand sway in stroke patients. Further analysis using functional PCA identifies specific components that correlate with clinical metrics, providing valuable insights into gait abnormalities. Notably, one component exhibits a strong correlation with stroke laterality, suggesting its potential as a marker for identifying the affected side.
+
+In conclusion, this method offers a powerful tool for analyzing biomechanical gait data. By removing nuisance parameter variations and revealing underlying gait characteristics, this method has the potential to significantly improve stroke diagnosis, assessment, and potentially rehabilitation strategies. Future work will explore the application of this registration method to larger patient cohorts and investigate its ability to monitor treatment progress in stroke patients.
+
+
+\begin{figure}
+     \centering
+     \includegraphics[width=0.99\textwidth]{figures/emg_registration.png}
+     \label{fig:emg_registration}
+     \caption{EMG Registration}
+ \end{figure}
+
+
+\begin{figure}
+     \centering
+     \includegraphics[width=0.99\textwidth]{figures/emg_eigens/1.png}
+     \label{fig:emg_eigenfunctions}
+     \caption{First EMG Eigenfunction}
+ \end{figure}
+
+
+
+\begin{figure}
+     \centering
+     \includegraphics[width=0.99\textwidth]{figures/acc_comparison.png}
+     \label{fig:accuracy_comparison}
+     \caption{Median F1 score and ROC AUC vs rank for classification performed on principal components achieved from registered and unregistered trajectories. Registration seems to reduce required rank for higher classification accuracy.}
+ \end{figure}
+
+
+
+
+\begin{table}
+\centering
+\begin{tabular}[t]{lccc}
+\toprule
+Algorithm   & Median F1 Score & 95\% Confidence Interval\\
+\midrule
+% \textbf{DTW Quaternion (\cite{dolatabadi2016automated})} & 0.34\\
+\textbf{Euclidean KNN} & 0.7272 & (0.56, 0.8484)\\
+\textbf{DTW + KNN (\cite{tormene2009matching})} &  0.7619 & (0.5923, 0.8888)\\ 
+\textbf{Functional PCA on Gait Normalized Joint angles (\cite{cho2024stroke})} & 0.8461 & (0.7142, 0.9375) \\
+\textbf{Rotational registration to healthy via SVD (\cite{eichler20183d})} & 0.7741 &  (0.6313, 0.8914)\\
+%\textbf{Gritsenko et al (PCA on raw angles to get eigenfunctions?)} & \\
+%\textbf{DTW Clustering Dongdong Li et al} & \\
+\textbf{Functional PCA Kendall} & 0.88 & (0.75, 0.96)\\
+% \textbf{Kendall KNN (Prealigned to mean)} &  0.92\\
+% \textbf{Autoencoder (\cite{jeon2021anomalous})} & \\
+% RNN (\cite{jun2021deep}) & \\
+% \cite{dolatabadi2016automated} & \\
+\bottomrule
+\end{tabular}
+\caption{Performance comparison for different algorithms based on k-nearest neighbors in order to understand effect of distances on classification performance.}
+\label{other_comparison}
+\end{table}
+
+\begin{table}
+\centering
+\begin{tabular}[t]{lccc}
+\toprule
+Algorithm   & Median F1 Score & 95\% Confidence Interval\\
+\midrule
+\textbf{Functional pca kinematic (mean centred and unaligned)} & 0.80 & (0.67, 0.90)\\
+\textbf{Functional shape pca kinematic} & \textbf{0.88} & \textbf{(0.75, 0.96)}\\
+\textbf{Functional pca emg (mean centred and unaligned)} & 0.67 & (0.53, 0.78) \\
+\textbf{Functional shape pca emg} & \textbf{0.97} & \textbf{(0.92, 1.00)}\\
+\textbf{Functional pca kinematic+emg (mean centred and unaligned)} & 0.71 & (0.55, 0.83)\\
+\textbf{Functional shape pca kinematic+emg} & \textbf{0.97} & \textbf{(0.92, 1.00)}\\
+
+%\textbf{Coupled Matrix Factorization Kinematic + EMG (matcouply) + Baseline} & & \\
+% \textbf{Kinematic-EMG CCA} & & \\
+% \textbf{NMF emg linear envelope} & & \\
+% \textbf{NMF kinematic (R package 0-1 normalization + inverse transform)} & & \\
+% \textbf{NMF kinematic+emg} & & \\
+% \textbf{mofa} & \\
+% \textbf{cca} & \\
+% \textbf{stacked svd} ^ \\
+% \textbf{lshape logistic regression} & \\
+% \textbf{shape lstm KNN (Prealigned to mean)} &  \\
+% \textbf{shape principal components regression} & \\
+\bottomrule
+\end{tabular}
+\caption{Performance comparison for different algorithms with and without alignment.}
+\label{quantitative}
+\end{table}
+
+
+
+
+
+
+\bibliographystyle{unsrt}
+\bibliography{references}
+
+% \appendix
+
+
+% \section{Appendix}
+
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=0.9\textwidth]{figures/emg_eigens/1.png}
+% \includegraphics[width=0.9\textwidth]{figures/emg_eigens/2.png}
+% \includegraphics[width=0.9\textwidth]{figures/emg_eigens/3.png}
+% \includegraphics[width=0.9\textwidth]{figures/emg_eigens/4.png}
+% \includegraphics[width=0.9\textwidth]{figures/emg_eigens/5.png}
+
+% \end{figure}
+
+% \begin{figure}
+% \includegraphics[width=0.9\textwidth]{figures/emg_eigens/6.png}
+% \includegraphics[width=0.9\textwidth]{figures/emg_eigens/7.png}
+% \includegraphics[width=0.9\textwidth]{figures/emg_eigens/8.png}
+% \includegraphics[width=0.9\textwidth]{figures/emg_eigens/9.png}
+% \includegraphics[width=0.9\textwidth]{figures/emg_eigens/10.png}
+
+% \end{figure}
+
+% \begin{figure}
+% \includegraphics[width=0.9\textwidth]{figures/emg_eigens/11.png}
+% \includegraphics[width=0.9\textwidth]{figures/emg_eigens/12.png}
+% \includegraphics[width=0.9\textwidth]{figures/emg_eigens/13.png}
+% \includegraphics[width=0.9\textwidth]{figures/emg_eigens/14.png}
+% \includegraphics[width=0.9\textwidth]{figures/emg_eigens/15.png}
+
+% \end{figure}
+
+% \begin{figure}
+% \includegraphics[width=0.9\textwidth]{figures/emg_eigens/16.png}
+% \includegraphics[width=0.9\textwidth]{figures/emg_eigens/17.png}
+% \includegraphics[width=0.9\textwidth]{figures/emg_eigens/18.png}
+% \includegraphics[width=0.9\textwidth]{figures/emg_eigens/19.png}
+% \includegraphics[width=0.9\textwidth]{figures/emg_eigens/20.png}
+%     \caption{Caption}
+%     \label{fig:enter-label}
+% \end{figure}
+
+% \begin{figure}
+%      \centering
+%      \includegraphics[width=0.5\textwidth]{figures/emg_sigmas.png}
+%      \caption{EMG Singular Values}
+%  \end{figure}
+
+% \begin{figure}
+%      \centering
+%      \includegraphics[width=0.99\textwidth]{figures/multi_run_registration.png}
+%      \caption{Multiple runs of registration.}
+%  \end{figure}
+
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=0.30\textwidth]{figures/emg_registration/emg1.png}
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/karcher1.png}
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/emg_aligned1.png}
+
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/emg2.png}
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/karcher2.png}
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/emg_aligned2.png}
+
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/emg3.png}
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/karcher3.png}
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/emg_aligned3.png}
+
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/emg4.png}
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/karcher4.png}
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/emg_aligned4.png}
+
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/emg5.png}
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/karcher5.png}
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/emg_aligned5.png}
+
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/emg6.png}
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/karcher6.png}
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/emg_aligned6.png}
+
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/emg7.png}
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/karcher7.png}
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/emg_aligned7.png}
+
+
+% \end{figure}
+
+% \begin{figure}
+
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/emg8.png}
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/karcher8.png}
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/emg_aligned8.png}
+
+
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/emg9.png}
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/karcher9.png}
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/emg_aligned9.png}
+
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/emg10.png}
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/karcher10.png}
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/emg_aligned10.png}
+
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/emg11.png}
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/karcher11.png}
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/emg_aligned11.png}
+
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/emg12.png}
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/karcher12.png}
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/emg_aligned12.png}
+
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/emg13.png}
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/karcher13.png}
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/emg_aligned13.png}
+
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/emg14.png}
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/karcher14.png}
+% \includegraphics[width=0.30\textwidth]{figures/emg_registration/emg_aligned14.png}
+
+%     \caption{Emg data for each muscle}
+%     \label{fig:enter-label}
+% \end{figure}
+
+% \begin{figure}
+%      \centering
+%      \includegraphics[width=0.6\textwidth]{figures/emg_stroke_healthy.png}
+%      \caption{Emg samples of stroke and mean healthy}
+%  \end{figure}
+
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=1.0\textwidth]{figures/emg_eigenfunctions_rank1.png}
+%     \includegraphics[width=0.3\textwidth]{figures/boxplot_emg_pc1.png}
+%     \caption{Emg eigenfunctions and boxplot, rest are non significant.}
+%     \label{fig:means}
+% \end{figure}
+
+
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=1.0\textwidth]{figures/vpc_all.png}
+%     \includegraphics[width=0.5\textwidth]{figures/stiff_knee_gait.png}
+%     \caption{Modes of variation obtained from knee angles. VPCx1 is variation in knee flexion (important for separating stroke vs. healthy) while VPCx3 is variation in knee extension. VPCx1 is more useful for separating stroke vs healthy possibly because of stiff knee gait, which is one of the most common gait disorders post stroke.}
+%     \label{fig:enter-label}
+% \end{figure}
+
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=1.0\textwidth]{figures/boxplot.png}
+%     \caption{Boxplots on modes of variation obtained from knee angle.}
+%     \label{fig:enter-label}
+% \end{figure}
+
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=1.0\textwidth]{figures/vpc_all_shouder.png}
+%     \caption{Modes of variation obtained from shoulder angles.}
+%     \label{fig:enter-label}
+% \end{figure}
+
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=1.0\textwidth]{figures/boxplot_shoulder.png}
+%     \caption{Boxplots on modes of variation obtained from shoulder angle.}
+%     \label{fig:enter-label}
+% \end{figure}
+
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=0.45\textwidth]{figures/cross_correlation/cross_crrorelation_y.png}
+%     \caption{Correlation of demographics}
+%     \label{fig:means}
+% \end{figure}
+
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=1.0\textwidth]{figures/resample_linear.png}
+%     \includegraphics[width=1.0\textwidth]{figures/resample_sine.png}we
+%     \caption{Boxplots on modes of variation obtained from shoulder angle.}
+%     \label{fig:enter-label}
+% \end{figure}
+
+% VPCx1 and VPCx4 seem to be representing good candidates for separating healthy from stroke. Positive deviation from VPCx1 indicates a reduction in knee flexion. Stiff knee gait (SKG) is defined as reduced knee flexion during the swing phase. SKG is one of the most common gait disorders following stroke. It affects approximately 60\% of stroke patients with gait disorders \cite{li2023stiff}.
+
+% VPCx3 seems to indicate variation in knee extension, however we did not see evidence of this being useful to separate stroke from healthy.
+
+% \textbf{Shoulder}
+% VPCx represents flexion, while VPCy represents shoulder adduction, VPCz represents right internal rotation. Mode 1 in all 3 represents a scaling. Shoulder seems more important for seperating stroke from normal compared to knee.
+
+
+% \begin{itemize}
+%     \item pc1: global scaling, rank 1 covariation because stroke simultaneously affects head position, upper body and lower body range of gait    
+%     \item pc2: upper body variation, how bent does one person keep their arm in a static configuration?
+%     \item pc3: left arm variation, how bent do they keep their left arm?
+%     \item pc4: left leg and right arm variation
+%     \item pc5: hip variation
+%     \item pc6: right arm
+%     \item pc7: right arm, left leg
+%     \item pc8: right hip, left ankle
+%     \item pc11: left elbow variation
+%     \item left variation occurs before right variation, possibly due to higher frequency of left stroke?
+%     \item mode 1 and mode 10, 
+% \end{itemize}
+
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=0.9\textwidth]{figures/stroke_cohort_registration.png}
+%     \includegraphics[width=0.9\textwidth]{figures/registration_2.png}
+%     \includegraphics[width=0.9\textwidth]{figures/shape_registration3.png}
+%     \includegraphics[width=0.9\textwidth]{figures/registraion.png}
+%     \caption{Caption}
+%     \label{fig:enter-label}
+% \end{figure}
+
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=0.9\textwidth]{figures/registation_healthy1.png}
+%     \includegraphics[width=0.9\textwidth]{figures/registration_healthy2.png}
+%     \includegraphics[width=0.9\textwidth]{figures/registration_healthy3.png}
+
+%     \caption{Caption}
+%     \label{fig:enter-label}
+% \end{figure}
+
+
+
+% \begin{table}
+% \centering
+% \begin{tabular}[t]{lccc}
+% \toprule
+% PC Mode   & Interpretation (new) &  Interpretation (old)\\
+% \midrule
+% \textbf{pc1} & scaling & scaling \\
+% \textbf{pc2} & arm bending with movements & arm bending no movement\\
+% \textbf{pc3} & left arm noisy & left arm bend clean\\
+% \bottomrule
+% \end{tabular}
+% \caption{}
+% \label{}
+% \end{table}
+
+% \shashwat{
+% \begin{itemize}
+%     \item euclidean/dtw mean does not work because of both rotation and phase variability
+%     \item simple rotation alignment does not work because of poor correspondence between frames of two different participants (take a random trajectory, OPA everything to this random and take euclidean mean)
+%     \item registration needs to be done over group of both reparameterizations and rotations
+%     \item kendall shape mean better quantifies mean of both cohorts post registration
+%     \item visually discern differences (gait step length/upper limb freezing/head tilting) in stroke and healthy
+%     \item mixing the two and running fpca finds modes of shape variation: first mode explains most of covariation, only upper body variation, elbow variation,  since it captures the phenotypes associated with stroke (gait step length/upper limb freezing/head tilting)
+%     \item we explore correlations of our pc loadings with baseline ambulatory measures
+%     \item try functional transported cca/pls on the raw data to directly identifying orthogonal stroke covarying shape modes
+% \end{itemize}
+% }
+
+% \arafat{
+% \begin{itemize}
+%     \item sit and do writing, interpretation of pcs, rank 1 covariation and story so far
+% \item use pairwise distances based on dynamic time warping, euclidean and kendall shape space to build knn sort of classifiers
+%     \item writing up existing results for a conference paper, decide venue
+%     \item correlation of pcs with baseline metric ambulatory score (tinetii)
+%     \item try out regression/cca/partial least squares model, does that explain covariation better?
+% \end{itemize}
+% }
+
+\end{document}

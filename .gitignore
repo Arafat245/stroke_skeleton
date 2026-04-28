@@ -1,0 +1,82 @@
+# OS and editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Python cache and notebook checkpoints
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# Large data and model artifacts
+*.csv
+*.tsv
+*.txt
+*.xls
+*.xlsx
+*.pkl
+*.pickle
+*.joblib
+*.pt
+*.pth
+*.ckpt
+*.npy
+*.npz
+*.h5
+*.hdf5
+*.mat
+
+# Large documents and media
+*.pdf
+*.gz
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.eps
+*.mp4
+*.mov
+*.avi
+*.webm
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.synctex.gz
+*.tex~
+*.mex*
+
+# Raw datasets and extracted archives
+MNIST/
+__MACOSX/
+
+# Local data / outputs
+aligned_csv/
+aligned_data/
+csv/
+csv_angle/
+csv_angle_resampled/
+csv_clf/
+csv_r/
+data/
+data_angle/
+data_clf/
+data_tangent/
+labels_data/
+predictions/
+result_figures/
+tangent_vecs/
+unaligned_betas/
+videos/
+
+# Local helper datasets
+needed/*.txt
+rvae_papers/**/MSRAction3DSkeletonReal3D/
+
+# Generated summaries and caches
+Tangent_Vector/baselines/results/

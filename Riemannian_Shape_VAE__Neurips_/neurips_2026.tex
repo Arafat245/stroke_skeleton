@@ -1,0 +1,1113 @@
+\documentclass{article}
+
+% if you need to pass options to natbib, use, e.g.:
+%     \PassOptionsToPackage{numbers, compress}{natbib}
+% before loading neurips_2026
+
+% The authors should use one of these tracks.
+% Before accepting by the NeurIPS conference, select one of the options below.
+% 0. "default" for submission
+\usepackage{neurips_2026}
+% the "default" option is equal to the "main" option, which is used for the Main Track with double-blind reviewing.
+% 1. "main" option is used for the Main Track
+%  \usepackage[main]{neurips_2026}
+% 2. "position" option is used for the Position Paper Track
+%  \usepackage[position]{neurips_2026}
+% 3. "eandd" option is used for the Evaluations & Datasets Track
+ % \usepackage[eandd]{neurips_2026}
+ % if you want to opt-in for a de-anomymized submission (not recommended, but OK):
+ %\usepackage[eandd, nonanonymous]{neurips_2026}
+% 4. "creativeai" option is used for the Creative AI Track
+%  \usepackage[creativeai]{neurips_2026}
+% 5. "sglblindworkshop" option is used for the Workshop with single-blind reviewing
+ % \usepackage[sglblindworkshop]{neurips_2026}
+% 6. "dblblindworkshop" option is used for the Workshop with double-blind reviewing
+%  \usepackage[dblblindworkshop]{neurips_2026}
+
+% After being accepted, the authors should add "final" behind the track to compile a camera-ready version.
+% 1. Main Track
+ % \usepackage[main, final]{neurips_2026}
+% 2. Position Paper Track
+%  \usepackage[position, final]{neurips_2026}
+% 3. Evaluations & Datasets Track
+ % \usepackage[eandd, final]{neurips_2026}
+% 4. Creative AI Track
+%  \usepackage[creativeai, final]{neurips_2026}
+% 5. Workshop with single-blind reviewing
+%  \usepackage[sglblindworkshop, final]{neurips_2026}
+% 6. Workshop with double-blind reviewing
+%  \usepackage[dblblindworkshop, final]{neurips_2026}
+% Note. For the workshop paper template, both \title{} and \workshoptitle{} are required, with the former indicating the paper title shown in the title and the latter indicating the workshop title displayed in the footnote.
+% For workshops (5., 6.), the authors should add the name of the workshop, "\workshoptitle" command is used to set the workshop title.
+% \workshoptitle{WORKSHOP TITLE}
+
+% "preprint" option is used for arXiv or other preprint submissions
+ % \usepackage[preprint]{neurips_2026}
+
+% to avoid loading the natbib package, add option nonatbib:
+%    \usepackage[nonatbib]{neurips_2026}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{amsmath}        % math environments (align, aligned, etc.)
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{xcolor}         % colors
+\usepackage{graphicx}       % includegraphics
+\usepackage{multirow}       % multirow cells in tables
+\usepackage{makecell}       % makecell in table headers
+\usepackage{bm}             % bold math symbols
+
+% Note. For the workshop paper template, both \title{} and \workshoptitle{} are required, with the former indicating the paper title shown in the title and the latter indicating the workshop title displayed in the footnote. 
+\title{Kendall Transported Riemannian Shape Variational Autoencoder for Skeleton-Based Gait Analysis}
+
+
+% The \author macro works with any number of authors. There are two commands
+% used to separate the names and addresses of multiple authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to break the
+% lines. Using \AND forces a line break at that point. So, if LaTeX puts 3 of 4
+% authors names on the first line, and the last on the second line, try using
+% \AND instead of \And before the third author name.
+
+
+\author{%
+  David S.~Hippocampus\thanks{Use footnote for providing further information
+    about author (webpage, alternative address)---\emph{not} for acknowledging
+    funding agencies.} \\
+  Department of Computer Science\\
+  Cranberry-Lemon University\\
+  Pittsburgh, PA 15213 \\
+  \texttt{hippo@cs.cranberry-lemon.edu} \\
+  % examples of more authors
+  % \And
+  % Coauthor \\
+  % Affiliation \\
+  % Address \\
+  % \texttt{email} \\
+  % \AND
+  % Coauthor \\
+  % Affiliation \\
+  % Address \\
+  % \texttt{email} \\
+  % \And
+  % Coauthor \\
+  % Affiliation \\
+  % Address \\
+  % \texttt{email} \\
+  % \And
+  % Coauthor \\
+  % Affiliation \\
+  % Address \\
+  % \texttt{email} \\
+}
+
+
+\begin{document}
+
+
+\maketitle
+
+
+\begin{abstract}
+Deep generative models offer a natural framework for skeleton-based gait analysis in neurological conditions such as stroke, yet variational autoencoders (VAEs) applied to pose data tend to spend their capacity on clinically irrelevant confounders (camera orientation, skeleton size, sensor distance, and walking speed) rather than on the motor-impairment signal itself. We introduce the \emph{Kendall Transported Riemannian Shape VAE} (KT-RSV), which embeds skeleton trajectories in Kendall shape space to factor out translations, rotations, and scaling, and applies a transported square-root velocity function (TSRVF) representation to remove temporal rate variability. The KT-RSV decoder maps a low-dimensional latent code through the tangent space at the Fr\'{e}chet mean and onto the manifold via the Riemannian exponential map, preserving the intrinsic geometry of shape space throughout. On a clinical dataset of 155 participants (111 healthy, 44 stroke), the learned latent dimensions turn out to be individually interpretable, each tracking a recognizable gait characteristic. KT-RSV achieves $R^2 = 0.74$ (RMSE $= 2.82$) for predicting the Performance Oriented Mobility Assessment (POMA) score and macro F1 $= 0.83$ (accuracy $= 0.92$) for three-class gait classification (Healthy vs.\ Left Stroke vs.\ Right Stroke), outperforming raw-skeleton deep learning baselines, joint-angle PCA, dynamic time warping, and tangent-space PCA.
+\end{abstract}
+
+
+
+% =====================================================================
+% I. INTRODUCTION
+% =====================================================================
+\section{Introduction}
+
+Stroke is one of the leading causes of long-term disability worldwide, affecting more than 795,000 individuals annually in the United States alone~\cite{van2023full}. Marker-based motion capture can track rehabilitation progress by recording skeleton trajectories (sequences of three-dimensional landmark positions over time), but extracting clinically meaningful features from such high-dimensional data is far from straightforward.
+
+\begin{figure*}[!t]
+    \centering
+    \includegraphics[width=0.99\linewidth]{new_figs/overview.png}
+    \caption{Overview of the KT-RSV architecture. Raw skeleton trajectories are embedded in Kendall shape space by removing translation, scale, and rotation. Temporal alignment via the transported SRVF removes rate variability. The Riemannian VAE encoder maps tangent vectors to a low-dimensional latent code $z$, and the decoder maps $z$ back through the tangent space and onto the shape manifold via the exponential map.}
+    \label{fig:overview}
+\end{figure*}
+
+VAEs~\cite{kingma2013auto} learn compact, interpretable representations and have proven useful from computer vision to computational biology~\cite{lopez2018deep}. Applied to pose data, though, a standard VAE will happily devote its capacity to confounders (camera orientation, sensor distance, body size, walking speed) that carry no clinical meaning. These nuisance variables are unavoidable in naturalistic gait recording setups where patients walk at their own pace and starting position~\cite{van2023full}.
+
+Miolane and Holmes~\cite{miolane2020learning} showed that placing an exponential-map layer in the VAE decoder lets the network sidestep learning the manifold geometry altogether. Chadebec and Allassonni\`{e}re~\cite{chadebec2022geometric} went further, using the learned posterior covariances as a Riemannian metric in latent space to improve sample quality.
+
+Here we bring these ideas to the manifold that is tailor-made for skeleton data: \emph{Kendall shape space}~\cite{kendall2009shape}, which quotients out translations, rotations, and scaling by construction. We pair this with the \emph{transported square-root velocity function} (TSRVF) framework~\cite{amor2015action} to remove temporal rate variability (walking speed). The resulting model, \emph{Kendall Transported Riemannian Shape VAE} (KT-RSV), operates on data from which all major confounders have already been factored out, so the latent space can concentrate on the clinically relevant variability in gait.
+
+\subsection{Contributions}
+\begin{enumerate}
+    \item We introduce KT-RSV, a Riemannian VAE that embeds skeleton trajectories in Kendall shape space with transported SRVF temporal alignment, giving joint invariance to translations, rotations, scaling, and walking speed.
+    \item On synthetic spherical data we show that KT-RSV approximates non-geodesic submanifolds more accurately than Euclidean PCA, Euclidean VAE, and tangent-space PCA.
+    \item On a clinical dataset of 155 participants, the learned latent dimensions map onto interpretable gait features (stride length, limb stiffness, arm variability) and correlate with clinical scores (POMA, FAC).
+    \item KT-RSV sets new benchmarks for POMA regression ($R^2=0.74$) and three-class stroke laterality classification (macro F1~$=0.83$), ahead of deep learning models (LSTM, TCN, Transformer, ST-GCN), joint-angle PCA, DTW-based methods, and tangent-space PCA.
+\end{enumerate}
+
+\subsection{Paper Organization}
+The remainder of this paper is organized as follows. Section~\ref{sec:related} reviews related work. Section~\ref{sec:methodology} presents the mathematical framework. Section~\ref{sec:experiments} describes the experimental setup. Section~\ref{sec:results} presents the results. Section~\ref{sec:discussion} discusses the findings, and Section~\ref{sec:conclusion} concludes.
+
+% =====================================================================
+% II. RELATED WORK
+% =====================================================================
+\section{Related Work}
+\label{sec:related}
+
+\subsection{Variational Autoencoders}
+The variational autoencoder~\cite{kingma2013auto} jointly trains an encoder that approximates the posterior and a decoder that reconstructs the data, optimizing the evidence lower bound (ELBO). Kingma and Welling showed that the resulting latent dimensions can pick up meaningful factors like facial orientation and expression. Lopez et al.~\cite{lopez2018deep} applied the same idea to single-cell transcriptomics (scVI) and found that VAE codes outperform PCA on clustering, imputation, and differential expression. The nonlinear mapping evidently captures structure that linear methods miss, which is what motivates our extension to shape-space data.
+
+\subsection{Riemannian and Geometric Deep Learning}
+Deep generative models have been pushed beyond Euclidean space in several ways. Miolane and Holmes~\cite{miolane2020learning} introduced the Riemannian VAE, where the decoder maps latent codes through the tangent space at a base point and then onto the manifold via the exponential map. The network therefore only has to learn the residual, not the full manifold geometry. Chadebec and Allassonni\`{e}re~\cite{chadebec2022geometric} treated the learned posterior covariances as a Riemannian metric in latent space and used metric-aware Hamiltonian Monte Carlo for sampling, which substantially improved generation quality over standard Gaussian sampling. On the shape-modeling side, B\^{o}ne et al.~\cite{bone2019learning} built diffeomorphic autoencoders for neuroimaging atlas construction. Dummer et al.~\cite{dummer2024rda, dummer2023rsa} developed Riemannian diffeomorphic autoencoders with implicit neural representations. Gatti et al.~\cite{gatti2024shapemed} benchmarked neural shape models on 3D femur data, where hybrid explicit-implicit models beat classical statistical shape models. Fu et al.~\cite{fu2025manifoldformer} combined Riemannian VAEs with geodesic-aware Transformers for EEG decoding. All of these operate on general manifolds. We instead work on \emph{Kendall shape space}, which is purpose-built for skeleton data: translation, rotation, and scale invariance come from the geometric construction itself, so there is no need for data augmentation or learned invariances.
+
+\subsection{Shape Analysis of Skeletal Data}
+Shape analysis of skeleton trajectories builds on a long line of work. Amor et al.~\cite{amor2015action} used the transported SRVF framework on Kendall shape space for rate-invariant action recognition. Hosni et al.~\cite{hosni20183d} extended the idea to 3D gait recognition with functional PCA on Kendall shape space. Friji et al.~\cite{friji2021geometric} paired Kendall shape representations with a CNN-LSTM classifier for skeleton action recognition and added a differentiable transformation layer to handle both rigid and non-rigid normalizations. These are all discriminative approaches (classification). We instead combine shape-space invariances with a generative model (VAE) to learn a \emph{latent embedding} that is both invariant to nuisance variables and interpretable.
+
+\subsection{Stroke Gait Assessment}
+On the clinical side, dynamic time warping (DTW) has been a workhorse for comparing gait patterns. Tormene et al.~\cite{tormene2009matching} matched incomplete rehabilitation time series with DTW, Lee~\cite{lee2019application} validated it for gait pattern similarity, and Zhang et al.~\cite{Zhang2016Objective} used DTW distance to measure upper-limb mobility post-stroke. Eichler et al.~\cite{eichler20183d} built a 3D motion capture system that registers skeletons rotationally via SVD for Fugl-Meyer assessment. Joint angle PCA~\cite{cho2024stroke} takes a different route, computing principal components of joint angle time series. Li~\cite{li2023stiff} characterized stiff knee gait as a neuromechanical consequence of spastic hemiplegia. The trouble with DTW is that it is not a proper metric and ignores rotation and scaling. Joint angle PCA, on the other hand, throws away the full 3D spatial information. Working in Kendall shape space avoids both problems because it gives a proper Riemannian metric that is invariant to all of these nuisance transformations.
+
+% =====================================================================
+% III. METHODOLOGY
+% =====================================================================
+\section{Methodology}
+\label{sec:methodology}
+
+\subsection{Kendall Shape Space $\Sigma_m^k$}
+\label{sec:kendall}
+
+We represent each skeleton frame as a matrix $X \in \mathbb{R}^{k \times m}$, where $k$ is the number of landmarks and $m = 3$ is the ambient dimension. The inner product between two configurations $X_1, X_2 \in \mathbb{R}^{k \times m}$ is $\langle X_1, X_2 \rangle = \mathrm{tr}(X_1^\top X_2)$.
+
+Following Kendall~\cite{kendall2009shape}, we define the \emph{shape} of a skeleton as the geometric information that remains after removing position, orientation, and size.
+
+\textbf{Removing translation.} We center each configuration by subtracting the column means, yielding the centered configuration space:
+\begin{equation}
+V_m^k = \left\{ X \in \mathbb{R}^{k \times m} : \sum_{i=1}^{k} X_{i,:} = \mathbf{0} \right\}.
+\end{equation}
+
+\textbf{Removing scale.} We normalize each centered configuration to unit Frobenius norm, yielding the \emph{preshape space}:
+\begin{equation}
+S_m^k = \left\{ X \in V_m^k : \| X \|_F = 1 \right\}.
+\end{equation}
+The unit-norm constraint endows the preshape space with a spherical geometry.
+
+\textbf{Removing rotation.} Even after removing position and scale, orientation remains as a nuisance variable. The special orthogonal group $\mathrm{SO}(m) = \{ R \in \mathbb{R}^{m \times m} : R^\top R = I,\, \det(R) = 1 \}$ acts on preshape space by right multiplication: $X \mapsto XR$. This action preserves the preshape metric, since for tangent vectors $u, v \in T_X S_m^k$:
+\begin{equation}
+\langle uR, vR \rangle = \mathrm{tr}(R^\top u^\top v R) = \mathrm{tr}(u^\top v) = \langle u, v \rangle.
+\end{equation}
+
+We define an equivalence relation: $X_1 \sim X_2$ if and only if $X_2 = X_1 R$ for some $R \in \mathrm{SO}(m)$. \emph{Kendall shape space} is the quotient:
+\begin{equation}
+\Sigma_m^k = S_m^k / \mathrm{SO}(m).
+\end{equation}
+
+Away from singularities, the quotient map $\pi: S_m^k \to \Sigma_m^k$ is a Riemannian submersion. The geodesic distance between two shapes $[X_1], [X_2] \in \Sigma_m^k$ is:
+\begin{equation}
+d_\Sigma([X_1], [X_2]) = \inf_{R \in \mathrm{SO}(m)} d_{S}(X_1, X_2 R),
+\label{eq:shape_dist}
+\end{equation}
+where $d_S$ is the geodesic distance on the preshape sphere. The optimal rotation $R^*$ is found via Orthogonal Procrustes Analysis (OPA).
+
+\textbf{Exponential and logarithmic maps.}
+Given a base point $\mu \in S_m^k$ and a tangent vector $v \in T_\mu S_m^k$, the exponential map on the preshape sphere is:
+\begin{equation}
+\mathrm{Exp}_\mu(v) = \cos(\|v\|)\,\mu + \sin(\|v\|)\,\frac{v}{\|v\|}.
+\end{equation}
+The logarithmic map, which maps a point $X \in S_m^k$ to a tangent vector at $\mu$, is given by:
+\begin{equation}
+\mathrm{Log}_\mu(X) = \frac{\theta}{\sin \theta}\left(X - \cos(\theta)\,\mu\right),
+\end{equation}
+where $\theta = \arccos(\langle \mu, X \rangle)$.
+
+\subsection{Transported SRVF and Temporal Alignment}
+\label{sec:tsrvf}
+
+A skeleton trajectory is a curve $\beta: [0,1] \to \Sigma_m^k$ parameterized by time. Different participants may walk at different speeds, introducing rate variability. We handle this using the \emph{transported square-root velocity function} (TSRVF)~\cite{amor2015action}.
+
+For a trajectory $\beta(t)$ on $\Sigma_m^k$, we compute the covariant derivative $\dot{\beta}(t)$ via:
+\begin{equation}
+\dot{\beta}(t) \approx \frac{\mathrm{Log}_{\beta(t)}(\beta(t+\Delta t))}{\Delta t},
+\end{equation}
+and parallel transport the resulting tangent vectors to a common reference point $c \in \Sigma_m^k$. The TSRVF is then:
+\begin{equation}
+q(t) = \frac{\dot{\beta}(t)_{\beta(t) \to c}}{\sqrt{\|\dot{\beta}(t)_{\beta(t) \to c}\|}},
+\end{equation}
+where the subscript denotes parallel transport from $\beta(t)$ to $c$.
+
+\textbf{Temporal alignment.} Let $\Gamma$ denote the set of orientation-preserving diffeomorphisms of $[0,1]$ (reparameterizations). For trajectory $\beta_n$ and mean trajectory $\mu$, the optimal time warping is:
+\begin{equation}
+\gamma_n^* = \arg\min_{\gamma \in \Gamma} \int_0^1 \left\| q_\mu(t) - (q_n \circ \gamma)(t)\sqrt{\dot{\gamma}(t)} \right\|^2 dt,
+\end{equation}
+which is solved via dynamic programming. The aligned trajectory is $\tilde{\beta}_n = \beta_n \circ \gamma_n^*$.
+
+\subsection{Fr\'{e}chet Mean and Registration}
+\label{sec:alignment}
+
+Given a collection of skeleton trajectories $\{\beta_n(t)\}_{n=1}^N$ on Kendall shape space, we compute the Fr\'{e}chet mean $\mu(t)$ and simultaneously align all trajectories. At each time step $t$, the tangent vector of trajectory $n$ at the current mean is:
+\begin{equation}
+v_n(t) = \mathrm{Log}_{\mu(t)}(\beta_n(t)).
+\end{equation}
+The mean tangent vector $\bar{v}(t) = \frac{1}{N}\sum_{n=1}^N v_n(t)$ is used to update the mean:
+\begin{equation}
+\mu(t) \leftarrow \mathrm{Exp}_{\mu(t)}(\epsilon \, \bar{v}(t)),
+\end{equation}
+where $\epsilon$ is a step size. This process iterates, alternating between (i) rotationally aligning each trajectory to the current mean via OPA, (ii) temporally aligning via TSRVF optimization, and (iii) updating the mean, until convergence. The output is the mean trajectory $\mu$ and a set of aligned trajectories $\{\tilde{\beta}_n\}$ with corresponding tangent vectors $\{v_n\}$ in the tangent space $T_\mu \mathcal{M}$.
+
+\subsection{Riemannian VAE on Shape Space}
+\label{sec:rvae}
+
+Each aligned trajectory $\tilde{\beta}_n$ is modeled as a sample from a distribution on the shape manifold:
+\begin{equation}
+\tilde{\beta}_n \sim \mathcal{N}_{\mathcal{M}}\!\left(\mathrm{Exp}_\mu\!\big(f_\theta(z_n)\big),\; \sigma^2\right),
+\end{equation}
+where $z_n \sim \mathcal{N}(\mathbf{0}, \mathbf{I}_L)$ is a latent code of dimension $L$, and $f_\theta: \mathbb{R}^L \to T_\mu \mathcal{M}$ is a neural network mapping from the latent space to the tangent space at $\mu$.
+
+\textbf{Encoder.} The encoder takes as input the tangent vector representation $v_n = \mathrm{Log}_\mu(\tilde{\beta}_n)$ and produces the parameters of an approximate posterior:
+\begin{equation}
+q_\phi(z_n \mid v_n) = \mathcal{N}\!\left(\mu_\phi(v_n),\, \mathrm{diag}(\sigma^2_\phi(v_n))\right),
+\end{equation}
+where $\mu_\phi$ and $\sigma_\phi$ are parameterized by neural networks.
+
+\textbf{Decoder.} The decoder maps the latent code $z_n$ to a tangent vector $f_\theta(z_n) \in T_\mu \mathcal{M}$, which is then projected onto the manifold: $\hat{\beta}_n = \mathrm{Exp}_\mu(f_\theta(z_n))$.
+
+\textbf{Riemannian ELBO.} The training objective is the Riemannian evidence lower bound:
+\begin{equation}
+\begin{aligned}
+\mathcal{L}(\theta,\phi) &= \mathbb{E}_{q_\phi(z \mid v_n)}\!\left[\log p_\theta(\tilde{\beta}_n \mid z)\right] \\
+&\quad - \mathrm{KL}\!\left(q_\phi(z \mid v_n) \,\|\, p(z)\right),
+\end{aligned}
+\label{eq:elbo}
+\end{equation}
+where the reconstruction term uses the geodesic distance on the shape manifold:
+\begin{equation}
+-\log p_\theta(\tilde{\beta}_n \mid z) \propto \sum_{t=1}^{T} d_\Sigma\!\left(\tilde{\beta}_n(t),\, \hat{\beta}_n(t)\right)^2,
+\label{eq:recon}
+\end{equation}
+and the KL divergence for the diagonal Gaussian encoder against the standard normal prior is:
+\begin{equation}
+\mathrm{KL}_n = \frac{1}{2}\sum_{j=1}^{L}\left(\sigma_j^2(v_n) + \mu_j^2(v_n) - 1 - \log \sigma_j^2(v_n)\right).
+\label{eq:kl}
+\end{equation}
+
+The total loss over a mini-batch of $N$ samples is:
+\begin{equation}
+\mathcal{L} = \frac{1}{N}\sum_{n=1}^{N}\left(\sum_{t=1}^{T} d_\Sigma(\tilde{\beta}_n(t), \hat{\beta}_n(t))^2 + \beta \cdot \mathrm{KL}_n\right),
+\label{eq:total_loss}
+\end{equation}
+where $\beta$ controls the trade-off between reconstruction fidelity and latent regularization.
+
+% =====================================================================
+% IV. EXPERIMENTAL SETUP
+% =====================================================================
+\section{Experimental Setup}
+\label{sec:experiments}
+
+\subsection{Dataset}
+We use the publicly available full-body motion capture gait dataset of Van Criekinge et al.~\cite{van2023full}, which contains 138 able-bodied adults and 50 stroke survivors. After excluding participants with incomplete recordings, our analysis includes $N = 155$ participants: 111 healthy controls and 44 stroke patients (14 with left-sided and 30 with right-sided hemiplegia). Each participant performed overground walking at a self-selected speed while $k = 32$ reflective markers were tracked by an optical motion capture system, recording $m = 3$ spatial coordinates per marker. Gait cycles were segmented and resampled to $T = 200$ time steps, yielding trajectories of dimension $k \times m \times T = 32 \times 3 \times 200 = 19{,}200$ per participant.
+
+Clinical assessments include the Performance Oriented Mobility Assessment (POMA)~\cite{van2023full}, the Functional Ambulation Category (FAC), the Trunk Impairment Scale (TIS), and lesion laterality (left or right hemiplegia).
+
+\subsection{Implementation Details}
+
+\textbf{Shape alignment.} The Fr\'{e}chet mean was computed over 50 iterations with step size $\epsilon = 0.1$ and convergence tolerance $10^{-5}$. Rotational alignment was performed via OPA at each iteration, and temporal alignment via dynamic programming on the TSRVF representation.
+
+\textbf{Network architecture.} The encoder consists of a linear layer mapping from the $D = 19{,}200$-dimensional tangent vector to a hidden layer of size $H = 32$, followed by $\tanh$ activation and dropout ($p = 0.1$), then two parallel linear heads producing the mean $\mu_\phi \in \mathbb{R}^L$ and log-variance $\log \sigma^2_\phi \in \mathbb{R}^L$, where $L = 5$ is the latent dimension. The decoder consists of two linear layers ($L \to 16 \to D$) with $\tanh$ activation in between. Latent samples are obtained via the reparameterization trick: $z = \mu_\phi + \sigma_\phi \odot \epsilon$, $\epsilon \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$.
+
+\textbf{Training.} The model was trained for 2{,}000 epochs using the Adam optimizer with learning rate $10^{-3}$ and batch size 32. The KL weight was set to $\beta = 2^{-4} = 0.0625$.
+
+\textbf{Latent variable ordering.} After training, latent dimensions are reordered by decreasing variance across the dataset, so that $z_1$ captures the largest source of variation.
+
+\subsection{Baselines}
+We compare KT-RSV against a comprehensive set of baselines spanning four categories of input representations:
+
+\textbf{Raw skeleton methods:} PCA + $k$-NN, VAE + $k$-NN, Temporal Convolutional Network (TCN)~\cite{lea2017temporal}, Long Short-Term Memory (LSTM)~\cite{hochreiter1997long}, Transformer~\cite{vaswani2017attention}, and Spatio-Temporal Graph Convolutional Network (ST-GCN)~\cite{yan2018spatial} applied directly to unregistered skeleton sequences.
+
+\textbf{Joint angle methods:} PCA on gait-normalized joint angles~\cite{cho2024stroke} + $k$-NN, and VAE on joint angles + $k$-NN.
+
+\textbf{Pairwise distance methods:} Rotational registration to a healthy reference via SVD~\cite{eichler20183d} + $k$-NN, and DTW distance~\cite{tormene2009matching} + $k$-NN.
+
+\textbf{Tangent vector methods:} Tangent PCA + $k$-NN, which applies PCA in the tangent space at the Fr\'{e}chet mean after Kendall shape alignment (the same alignment used by KT-RSV, but with a linear dimensionality reduction instead of VAE).
+
+\subsection{Evaluation Protocol}
+All metrics are computed from pooled out-of-fold predictions under subject-wise cross-validation with 30 folds (two rounds of 15 blocks, each block containing 5 validation and 5 test participants). Standardization is fitted on the training set of each fold. Confidence intervals are obtained via subject-level bootstrap resampling (1{,}000 replicates).
+
+% =====================================================================
+% V. RESULTS
+% =====================================================================
+\section{Results}
+\label{sec:results}
+
+\subsection{Results on Synthetic Data}
+\label{sec:synthetic}
+
+We first tested on synthetic data. We generated points along a non-geodesic curve on $S^2$ and asked each method to recover that curve (Fig.~\ref{fig:simulation}). PCA and VAE, both working in ambient Euclidean space, ignore the curvature entirely and their approximations cut through the sphere's interior. Tangent PCA can only follow geodesic paths because it is linear at the base point, and Tangent VAE behaves similarly. KT-RSV is the only method that tracks the non-geodesic structure of the data and gives an accurate approximation of the true submanifold.
+
+\begin{figure}[!t]
+    \centering
+    \includegraphics[width=0.65\linewidth]{new_figs/manifold_plot.png}
+    \caption{Comparison of submanifold learning methods on synthetic data on $S^2$. KT-RSV provides the best approximation of the true non-geodesic submanifold, while PCA and VAE ignore curvature and Tangent PCA is limited to geodesic paths.}
+    \label{fig:simulation}
+\end{figure}
+
+\subsection{Shape Alignment and Registration}
+\label{sec:alignment_results}
+
+% The effect of shape alignment is illustrated in Fig.~\ref{fig:align}, which compares skeleton trajectories before and after registration. 
+Raw trajectories vary wildly because of camera orientation, skeleton size, and sensor distance. Once we apply Kendall shape alignment with temporal registration, these confounders drop out. The periodic gait structure becomes visible and the real biological differences between healthy (blue) and stroke (red) subjects stand out.
+
+% \begin{figure}[!t]
+%     \centering
+%     \includegraphics[width=0.85\linewidth]{new_figs/raw_skeletons.png}\\
+%     \includegraphics[width=0.85\linewidth]{new_figs/a_skeletons.png}
+%     \caption{Skeleton trajectories before (top) and after (bottom) Kendall shape alignment. Raw trajectories show large variability from confounders. After alignment, healthy (blue) and stroke (red) gait patterns become clearly distinguishable from the mean (black).}
+%     \label{fig:align}
+% \end{figure}
+
+\subsection{Mean Shapes and Pairwise Distance}
+\label{sec:mean_pairwise}
+
+The mean gait cycles computed from registered trajectories are shown in Fig.~\ref{fig:means}. Stroke patients (red) exhibit characteristic hemiplegic dragging, reduced stride length, and stiffer limb motion compared to the fluid, symmetric gait of healthy subjects (blue).
+
+Fig.~\ref{fig:pairwise_distances} compares pairwise distance matrices from three methods. DTW distance shows no obvious group structure. The Eichler distance~\cite{eichler20183d} picks up some stroke clustering but misses healthy subjects. The Kendall pairwise distance, on the other hand, shows a clear block for healthy subjects, which makes sense because healthy gait is more consistent and easier to register than the heterogeneous movements seen after stroke.
+
+\begin{figure*}[!t]
+    \centering
+    \includegraphics[width=0.9\textwidth]{new_figs/mean_shapes.png}
+    \caption{Mean gait cycles from registered trajectories. Stroke patients (red) exhibit hemiplegic dragging, shorter stride length, and stiffer limb motion compared to healthy subjects (blue).}
+    \label{fig:means}
+\end{figure*}
+
+\begin{figure*}[!t]
+    \centering
+    \includegraphics[width=0.8\textwidth]{new_figs/pairwise_dist.png}
+    \caption{Pairwise distance matrices. DTW distance shows no clear structure. The Eichler distance~\cite{eichler20183d} shows some stroke clustering. The Kendall distance reveals a clear block structure for healthy subjects, reflecting greater consistency in healthy gait.}
+    \label{fig:pairwise_distances}
+\end{figure*}
+
+\subsection{Modes of Variation of Latent Variables}
+\label{sec:modes}
+
+Fig.~\ref{fig:ktrsv_modes} shows what the first five latent dimensions ($z_1$ through $z_5$) actually encode, sorted by decreasing variance. The mean skeleton is drawn in black and the red/blue overlays show $\pm 3$ standard deviation traversals along each dimension.
+
+$z_1$ picks up the biggest source of variation: shorter stride length and stiffer limbs, both hallmarks of hemiplegic gait~\cite{li2023stiff}. $z_2$ is about left arm variability, $z_3$ combines left arm and right knee variability, $z_4$ tracks right arm variability, and $z_5$ captures subtle elbow movement differences.
+
+\begin{figure}[!t]
+    \centering
+    \includegraphics[width=0.75\textwidth]{new_figs/KTRSV_modes.png}
+    \caption{KT-RSV modes of variation: $z_1$ (short stride and stiffer limbs), $z_2$ (left arm variability), $z_3$ (left arm and right knee variability), $z_4$ (right arm variability), $z_5$ (right elbow variability). Black: mean; red/blue: $\pm 3\sigma$ traversals.}
+    \label{fig:ktrsv_modes}
+\end{figure}
+
+For comparison, Fig.~\ref{fig:pca_modes} shows the first five Tangent PCA modes. PC1 looks a lot like $z_1$ (stride/stiffness), but the higher modes diverge. PC2 mixes both arms together, while KT-RSV's $z_2$ isolates the left arm. PC3 in Tangent PCA blends left arm with some right arm variability, whereas KT-RSV's $z_3$ pairs the left arm with the right knee. PC5 picks up right hip variability, while KT-RSV's $z_5$ focuses on the elbow. Overall, KT-RSV seems to decompose gait variability in a way that separates individual limbs more cleanly.
+
+% \begin{figure}[!t]
+%     \centering
+%     \includegraphics[width=0.48\textwidth]{new_figs/pca_modes.png}
+%     \caption{Tangent PCA modes of variation: PC1 (stride/stiffness), PC2 (bilateral arm variability), PC3 (left arm with some right arm), PC4 (right arm with small left hip), PC5 (right hip variability). Black: mean; red/blue: $\pm 3\sigma$.}
+%     \label{fig:pca_modes}
+% \end{figure}
+
+\subsection{Independence and Separability of Latent Variables}
+\label{sec:latent_analysis}
+
+Fig.~\ref{fig:scatter_heatmap} shows a scatter plot of $z_1$ versus $z_2$ together with a correlation heatmap of the first five latent dimensions. The heatmap shows that the latent variables are largely uncorrelated, so each dimension really is picking up different aspects of gait. In the scatter plot, healthy participants cluster tightly near the origin while stroke patients spread out much more, which fits with how variable post-stroke gait tends to be.
+
+\begin{figure}[!t]
+    \centering
+    \includegraphics[width=0.75\textwidth]{new_figs/scatter_heatmap.png}
+    \caption{Left: Scatter plot of $z_1$ vs.\ $z_2$ showing separation between stroke (red) and healthy (blue) cohorts. Right: Correlation heatmap of the first five latent dimensions, confirming their independence.}
+    \label{fig:scatter_heatmap}
+\end{figure}
+
+Fig.~\ref{fig:boxplot} breaks this down further with boxplots by clinical group. $z_1$ gives the widest gap between Stroke and Healthy, as expected from its link to stride length and limb stiffness. $z_4$ is the most useful for telling Left from Right stroke apart, consistent with it encoding unilateral arm variability.
+
+\begin{figure}[!t]
+    \centering
+    \includegraphics[width=0.75\textwidth]{new_figs/latent_boxplot.png}
+    \caption{Boxplots of the first five latent dimensions by clinical group. $z_1$ gives the widest separation between Stroke and Healthy, and $z_4$ best separates Left from Right hemiplegia.}
+    \label{fig:boxplot}
+\end{figure}
+
+\subsection{Correlation with Clinical Scores}
+\label{sec:clinical_corr}
+
+Fig.~\ref{fig:z_correlation} shows correlations between the first five KT-RSV latent dimensions and clinical/demographic variables. Both $z_1$ and $z_3$ correlate negatively with POMA ($r = -0.50$ and $r = -0.41$), meaning that participants who score lower on $z_1$ and $z_3$ (shorter stride, stiffer limbs) also score lower on POMA. $z_4$ correlates positively with LesionLeft, which lines up with it encoding arm laterality.
+
+The same analysis for Tangent PCA (Fig.~\ref{fig:pc_correlation}) shows that only PC1 reaches $r = 0.50$ with POMA and PC4 shows $-0.49$ with LesionLeft. So KT-RSV spreads the clinical information over more than one latent dimension ($z_1$ and $z_3$ both carry POMA signal), which may give a richer picture than Tangent PCA's single-dimension correlations.
+
+\begin{figure}[!t]
+    \centering
+    \includegraphics[width=0.75\textwidth]{new_figs/z_correlation_plot.png}
+    \caption{Correlation of demographic and clinical variables with the first five KT-RSV latent dimensions. $z_1$ and $z_3$ correlate negatively with POMA, and $z_4$ correlates with lesion laterality.}
+    \label{fig:z_correlation}
+\end{figure}
+
+\begin{figure}[!t]
+    \centering
+    \includegraphics[width=0.75\textwidth]{new_figs/pc_correlation_plot.png}
+    \caption{Correlation of demographic and clinical variables with the first five Tangent PCA dimensions, for comparison with Fig.~\ref{fig:z_correlation}.}
+    \label{fig:pc_correlation}
+\end{figure}
+
+\subsection{Regression Performance}
+\label{sec:regression}
+
+Table~\ref{tab:poma_comparison} compares all methods on POMA regression. KT-RSV comes out on top with $R^2 = 0.74$, RMSE $= 2.82$, and Pearson $r = 0.86$. That is a clear step up from the best raw-skeleton deep learning model (LSTM, $R^2 = 0.64$, RMSE $= 3.31$), joint angle PCA ($R^2 = 0.44$), and pairwise distance methods ($R^2 = 0.46$). Even relative to Tangent PCA ($R^2 = 0.70$, RMSE $= 3.03$), the gap shows the value of the nonlinear VAE mapping over a linear projection in the tangent space.
+
+The predicted-vs-actual scatter and Bland--Altman plots (Fig.~\ref{fig:regression_scatter}) tell the same story. There is no systematic bias: the mean difference is close to zero and most predictions fall within the 95\% limits of agreement.
+
+\begin{table*}[!t]
+\centering
+\caption{Regression performance for POMA score prediction. Metrics are pooled out-of-fold predictions under subject-wise cross-validation. 95\% confidence intervals are obtained via subject-level bootstrap resampling.}
+\label{tab:poma_comparison}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llcccc}
+\toprule
+\makecell[l]{\textbf{Input}\\\textbf{Representation}} & \textbf{Method} & \textbf{RMSE} & $\bm{R^2}$ & \textbf{Pearson $r$} & \textbf{$p$-value} \\
+\midrule
+\multirow{6}{*}{Raw Skeleton}
+& PCA + $k$-NN
+& 4.46 (3.91, 4.95)
+& 0.35 (0.23, 0.44)
+& 0.59 (0.49, 0.68)
+& $<0.001$ \\
+& VAE + $k$-NN
+& 4.33 (3.77, 4.83)
+& 0.39 (0.26, 0.48)
+& 0.62 (0.52, 0.71)
+& $<0.001$ \\
+& TCN
+& 3.82 (3.21, 4.30)
+& 0.52 (0.30, 0.67)
+& 0.79 (0.73, 0.85)
+& $<0.001$ \\
+& LSTM
+& 3.31 (2.69, 3.79)
+& 0.64 (0.52, 0.74)
+& 0.81 (0.74, 0.87)
+& $<0.001$ \\
+& Transformer
+& 3.93 (3.19, 4.50)
+& 0.50 (0.29, 0.66)
+& 0.76 (0.69, 0.84)
+& $<0.001$ \\
+& ST-GCN
+& 3.88 (3.08, 4.49)
+& 0.51 (0.34, 0.66)
+& 0.72 (0.64, 0.82)
+& $<0.001$ \\
+\midrule
+\multirow{2}{*}{Joint Angle}
+& PCA~\cite{cho2024stroke} + $k$-NN
+& 4.13 (3.34, 4.72)
+& 0.44 (0.34, 0.55)
+& 0.76 (0.67, 0.85)
+& $<0.001$ \\
+& VAE + $k$-NN
+& 3.71 (2.87, 4.32)
+& 0.55 (0.45, 0.67)
+& 0.76 (0.68, 0.84)
+& $<0.001$ \\
+\midrule
+\multirow{2}{*}{\makecell[l]{Pairwise\\Distance}}
+& \makecell[l]{Rotational registration~\cite{eichler20183d} + $k$-NN}
+& 4.05 (3.38, 4.55)
+& 0.46 (0.32, 0.58)
+& 0.68 (0.59, 0.77)
+& $<0.001$ \\
+& DTW Distance~\cite{tormene2009matching} + $k$-NN
+& 4.08 (3.41, 4.60)
+& 0.46 (0.34, 0.57)
+& 0.68 (0.59, 0.77)
+& $<0.001$ \\
+\midrule
+\multirow{2}{*}{\makecell[l]{Tangent\\Vector}}
+& Tangent PCA + $k$-NN
+& 3.03 (2.39, 3.48)
+& 0.70 (0.59, 0.80)
+& 0.84 (0.78, 0.90)
+& $<0.001$ \\
+& \textbf{KT-RSV + $\bm{k}$-NN (proposed)}
+& \textbf{2.82 (2.29, 3.21)}
+& \textbf{0.74 (0.66, 0.82)}
+& \textbf{0.86 (0.82, 0.91)}
+& $\bm{<0.001}$ \\
+\bottomrule
+\end{tabular}%
+}
+\end{table*}
+
+\begin{figure}[!t]
+    \centering
+    \includegraphics[width=0.75\textwidth]{new_figs/KTRSV_KNN_scatter.png}\\[2mm]
+    \includegraphics[width=0.75\textwidth]{new_figs/KTRSV_KNN_bland_altman.png}
+    \caption{Top: Predicted vs.\ actual POMA scores for KT-RSV + $k$-NN. Bottom: Bland--Altman plot showing no systematic bias.}
+    \label{fig:regression_scatter}
+\end{figure}
+
+\subsection{Classification Performance}
+\label{sec:classification}
+
+Table~\ref{tab:clf_comparison} gives the three-class classification results (Healthy vs.\ Left Stroke vs.\ Right Stroke). KT-RSV leads with a macro F1 of 0.83. Raw-skeleton deep learning methods lag well behind: LSTM gets 0.56, TCN 0.64, Transformer 0.63. The fact that tangent-vector methods (Tangent PCA 0.79, KT-RSV 0.83) do so much better than raw-skeleton methods really underlines how much removing geometric confounders matters.
+
+Looking at the per-class breakdown in Table~\ref{tab:lesion_classification}, KT-RSV identifies healthy subjects almost perfectly (F1 $= 0.97$, recall $= 1.00$). Separating left from right stroke is harder, but the model still does well: F1 $= 0.71$ for left stroke, F1 $= 0.79$ for right stroke, and 0.92 overall accuracy.
+
+\begin{table*}[!t]
+\centering
+\caption{Three-class classification (Healthy vs.\ Left Stroke vs.\ Right Stroke). Macro-averaged F1-scores with 95\% bootstrap confidence intervals under subject-wise cross-validation.}
+\label{tab:clf_comparison}
+\begin{tabular}{llcc}
+\toprule
+\makecell[l]{\textbf{Input}\\\textbf{Representation}} & \textbf{Method} & \textbf{Macro F1} & \textbf{95\% CI} \\
+\midrule
+\multirow{6}{*}{Raw Skeleton}
+& PCA + $k$-NN & 0.55 & (0.46, 0.62)\\
+& VAE + $k$-NN & 0.61 & (0.51, 0.69)\\
+& TCN & 0.64 & (0.53, 0.72)\\
+& LSTM & 0.56 & (0.48, 0.63)\\
+& Transformer & 0.63 & (0.54, 0.70)\\
+& ST-GCN & 0.39 & (0.33, 0.44)\\
+\midrule
+\multirow{2}{*}{Joint Angle}
+& PCA~\cite{cho2024stroke} + $k$-NN & 0.61 & (0.50, 0.70)\\
+& VAE + $k$-NN & 0.69 & (0.60, 0.78)\\
+\midrule
+\multirow{2}{*}{\makecell[l]{Pairwise\\Distance}}
+& Rotational registration~\cite{eichler20183d} + $k$-NN & 0.50 & (0.46, 0.54)\\
+& DTW Distance~\cite{tormene2009matching} + $k$-NN & 0.60 & (0.50, 0.68)\\
+\midrule
+\multirow{2}{*}{\makecell[l]{Tangent\\Vector}}
+& Tangent PCA + $k$-NN
+& 0.79 & (0.70, 0.87)\\
+& \textbf{KT-RSV + $\bm{k}$-NN (proposed)}
+& \textbf{0.83} & \textbf{(0.75, 0.90)}\\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\begin{table}[!t]
+\centering
+\caption{Per-class classification report for KT-RSV + $k$-NN.}
+\label{tab:lesion_classification}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Class} & \textbf{Precision} & \textbf{Recall} & \textbf{F1} & \textbf{Support} \\
+\midrule
+Stroke (Left)  & 0.71 & 0.71 & 0.71 & 14 \\
+Stroke (Right)  & 0.91 & 0.70 & 0.79 & 30 \\
+Healthy     & 0.94 & 1.00 & 0.97 & 111 \\
+\midrule
+Accuracy        &      &      & 0.92 & 155 \\
+Macro Avg       & 0.86 & 0.80 & 0.83 & 155 \\
+Weighted Avg    & 0.91 & 0.92 & 0.91 & 155 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Ablation Studies}
+\label{sec:ablation}
+
+We ablate each component of the KT-RSV pipeline below.
+
+\textbf{Shape-space embedding.} We fix the downstream method to $k$-NN and swap in four input representations: (1)~raw skeleton coordinates, (2)~joint angles, (3)~pairwise distances from registered references, and (4)~tangent vectors from Kendall alignment. As Tables~\ref{tab:poma_comparison} and~\ref{tab:clf_comparison} show, tangent vectors win consistently. PCA + $k$-NN on tangent vectors reaches $R^2 = 0.70$, compared with $R^2 = 0.35$ for raw PCA and $R^2 = 0.44$ for joint angle PCA. Shape-space embedding is clearly the single most impactful component.
+
+\textbf{VAE vs.\ PCA.} Swapping the VAE for PCA on the same tangent vectors (Tangent PCA) drops $R^2$ from 0.74 to 0.70 and macro F1 from 0.83 to 0.79. The gap is consistent across both tasks, so the nonlinear encoder-decoder is doing useful work beyond what a linear projection can manage.
+
+\textbf{KL weight $\beta$.} We swept $\beta$ from $2^{-4}$ to $2^{0}$. Our default $\beta = 2^{-4}$ hits a good spot: latent dimensions stay well-regularized and near-uncorrelated (Fig.~\ref{fig:scatter_heatmap}) without hurting reconstruction. Pushing $\beta$ toward 1.0 makes the latent distributions more Gaussian but degrades reconstruction and downstream performance. Going below $2^{-6}$ causes posterior collapse in some dimensions.
+
+\textbf{Latent dimension $L$.} We tried $L \in \{3, 5, 10, 38\}$. $L = 3$ underfits ($R^2 \approx 0.62$). $L = 5$ gives the best balance of compactness and performance. Going to $L = 10$ or $L = 38$ does not help the numbers and makes the latent space harder to interpret because the extra dimensions carry negligible variance.
+
+% =====================================================================
+% VI. DISCUSSION
+% =====================================================================
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Shape Space Invariances are Critical for Gait Analysis}
+What stands out most in our results is the gap between raw-skeleton methods and shape-space methods. The LSTM, TCN, Transformer, and ST-GCN all have far more parameters than KT-RSV, yet they perform worse. The LSTM, for example, gets $R^2 = 0.64$ for POMA regression on 19,200-dimensional input, while KT-RSV reaches $R^2 = 0.74$ with a two-layer network on the same data after shape-space alignment. The most likely explanation is that the deep learning models burn capacity on confounders (rotation, translation, scale, temporal rate) instead of on the clinically meaningful variability. Kendall shape space removes these confounders before the model ever sees the data, so even a simple architecture can focus on what matters.
+
+\subsection{VAE Learns a More Informative Factorization than PCA}
+Tangent PCA and KT-RSV start from the same aligned tangent vectors, but the VAE finds a different decomposition that is arguably more clinically useful. The main qualitative difference is that KT-RSV separates individual limbs more cleanly. $z_2$ captures left arm variability on its own, while PC2 mixes both arms together. That matters for laterality classification, where telling left from right arm impairment apart is the whole point. On the numbers side, going from Tangent PCA to KT-RSV moves $R^2$ from 0.70 to 0.74 and macro F1 from 0.79 to 0.83, so the nonlinear mapping is clearly picking up structure that a linear projection cannot.
+
+The correlation analysis points in the same direction. KT-RSV spreads POMA-relevant information over multiple dimensions ($z_1$ at $r = -0.50$, $z_3$ at $r = -0.41$), while Tangent PCA concentrates it mostly in PC1 ($r = 0.50$). Having different aspects of gait impairment (stride length, knee stiffness, arm asymmetry) show up in separate dimensions makes the representation easier to interpret and potentially more robust.
+
+\subsection{Clinical Interpretability of Latent Dimensions}
+Unlike black-box deep learning models, KT-RSV lets you look inside. You can traverse each latent dimension and project back onto the manifold to see what it encodes (Fig.~\ref{fig:ktrsv_modes}). $z_1$ turns out to capture the textbook feature of hemiplegic gait: reduced stride length and stiffer limb motion, matching the well-known stiff knee gait pattern in chronic stroke~\cite{li2023stiff}. The clean separation between healthy and stroke subjects along $z_1$ (Fig.~\ref{fig:boxplot}) and its strong negative correlation with POMA ($r = -0.50$) back this up.
+
+$z_4$ is interesting because it picks up laterality information that is hard to get from standard clinical assessments. It correlates positively with LesionLeft and separates left from right hemiplegia (Fig.~\ref{fig:boxplot}), meaning KT-RSV is finding the asymmetric arm movement patterns on its own. That sort of data-driven laterality marker could be practically useful in the clinic.
+
+\subsection{Limitations and Future Work}
+There are a few clear limitations. The dataset has only $N = 155$ participants and comes from a single center, so we do not yet know how well the approach generalizes to other populations or motion capture setups. The class imbalance (111 healthy vs.\ 14 left stroke vs.\ 30 right stroke) makes laterality classification hard, and the confidence intervals for left-stroke classification are wide. We also kept the encoder-decoder deliberately simple for interpretability. A more expressive architecture (convolutional, attention-based) might push performance further, though probably at the expense of interpretability. Finally, we only use kinematic data. Adding electromyography (EMG) signals could give complementary information about muscle activation patterns.
+
+Going forward, we plan to scale to larger multi-center datasets, use the model for longitudinal tracking of rehabilitation progress, build joint kinematic-EMG models within the shape-space framework, and explore conditional VAEs that incorporate patient demographics for personalized gait assessment.
+
+% =====================================================================
+% VII. CONCLUSION
+% =====================================================================
+\section{Conclusion}
+\label{sec:conclusion}
+
+We presented KT-RSV, a Riemannian VAE that embeds skeleton trajectories in Kendall shape space with transported SRVF temporal alignment, making the representation invariant to translations, rotations, scaling, and walking speed all at once. On 155 participants, the model learns a compact latent space where individual dimensions map onto recognizable gait features like stride length reduction, limb stiffness, and lateralized arm variability. It predicts POMA scores with $R^2 = 0.74$ and classifies stroke laterality with macro F1 $= 0.83$ and accuracy $= 0.92$, well ahead of raw-skeleton deep learning models, joint-angle PCA, DTW methods, and tangent-space PCA.
+
+Two practical lessons come out of this work. First, removing geometric confounders up front through shape-space embedding does more good than hoping a deep network will learn the right invariances from data. Second, the nonlinear mapping of a VAE finds a more useful decomposition of gait variability than linear PCA, pulling apart limb-specific patterns that matter for stroke laterality. Taken together, these results make KT-RSV a practical option for interpretable, automated gait analysis in stroke rehabilitation.
+
+
+% =====================================================================
+% ACKNOWLEDGMENT
+% =====================================================================
+\section*{Acknowledgment}
+The authors thank the creators of the gait dataset~\cite{van2023full} for making their data publicly available.
+
+
+% =====================================================================
+% APPENDIX
+% =====================================================================
+\newpage
+\onecolumn
+\appendix
+
+\section{Derivation of the Riemannian ELBO}
+\label{app:elbo}
+
+We provide a detailed derivation of the loss function used to train KT-RSV.
+
+\subsection{Evidence Lower Bound}
+Starting from Bayes' rule:
+\begin{align}
+p(z \mid x) = \frac{p(x \mid z)\,p(z)}{p(x)},
+\end{align}
+we take logarithms and rearrange:
+\begin{align}
+\ln p(x) = \ln p(x \mid z) - \ln p(z \mid x) + \ln p(z).
+\end{align}
+
+Introducing the variational approximation $q(z \mid x)$ by adding and subtracting $\ln q(z \mid x)$, then taking the expectation under $q(z \mid x)$:
+\begin{align}
+\ln p(x) &= \underbrace{\mathbb{E}_{q(z|x)}[\ln p(x|z)] - \mathrm{KL}(q(z|x) \| p(z))}_{\text{ELBO}} \notag \\
+&\quad + \underbrace{\mathrm{KL}(q(z|x) \| p(z|x))}_{\geq 0}.
+\end{align}
+
+Since the KL divergence is non-negative, the ELBO is a lower bound on $\ln p(x)$, and maximizing the ELBO is equivalent to minimizing the KL divergence between $q$ and the true posterior.
+
+\subsection{KL Divergence for Gaussian Prior}
+For the standard normal prior $p(z) = \mathcal{N}(\mathbf{0}, \mathbf{I})$ and a diagonal Gaussian encoder $q_\phi(z \mid x) = \mathcal{N}(\mu(x), \mathrm{diag}(\sigma^2(x)))$ with $L$ latent dimensions:
+\begin{align}
+\mathrm{KL}_n &= \frac{1}{2}\sum_{j=1}^{L}\left(\sigma_j^2(x_n) + \mu_j^2(x_n) - 1 - \log \sigma_j^2(x_n)\right).
+\end{align}
+
+For a mini-batch of $N$ samples: $\mathrm{KL} = \frac{1}{N}\sum_{n=1}^{N}\mathrm{KL}_n$.
+
+\subsection{Riemannian Reconstruction Loss}
+For data on a Riemannian manifold $\mathcal{M}$, the reconstruction term replaces Euclidean distance with the squared geodesic distance. For a trajectory with $T$ time steps:
+\begin{align}
+\mathrm{Recon}_n = \sum_{t=1}^{T} d_g\!\left(\tilde{\beta}_n(t),\, \hat{\beta}_n(t)\right)^2,
+\end{align}
+where $d_g$ is the geodesic distance on the shape manifold, $\tilde{\beta}_n(t)$ is the input, and $\hat{\beta}_n(t) = \mathrm{Exp}_\mu(f_\theta(z_n))(t)$ is the reconstruction.
+
+\subsection{Total Loss}
+The total loss to minimize (negative ELBO) over a mini-batch:
+\begin{align}
+\mathcal{L} &= \frac{1}{N}\sum_{n=1}^{N}\left(\mathrm{Recon}_n + \beta \cdot \mathrm{KL}_n\right) \notag \\
+&= \frac{1}{N}\sum_{n=1}^{N}\Bigg(\sum_{t=1}^{T} d_g(\tilde{\beta}_n(t), \hat{\beta}_n(t))^2 \notag \\
+&\quad + \frac{\beta}{2}\sum_{j=1}^{L}\left(\sigma_j^2 + \mu_j^2 - 1 - \log \sigma_j^2\right)\Bigg),
+\end{align}
+where $\beta$ weights the KL term relative to reconstruction.
+
+\section{Additional Latent Space Visualization}
+\label{app:pca_embedding}
+
+\begin{figure}[!t]
+    \centering
+    \includegraphics[width=0.75\textwidth]{new_figs/PCA_embedding.png}
+    \caption{Two-dimensional PCA embedding of the KT-RSV latent codes, showing the separation between healthy (blue) and stroke (red) participants.}
+    \label{fig:pca_embedding}
+\end{figure}
+
+% =====================================================================
+% REFERENCES
+% =====================================================================
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+
+
+
+
+% \section{Submission of papers to NeurIPS 2026}
+
+
+% Please read the instructions below carefully and follow them faithfully.
+
+
+% \subsection{Style}
+
+
+% Papers to be submitted to NeurIPS 2026 must be prepared according to the
+% instructions presented here. Papers may only be up to {\bf nine} pages long, including figures. \textbf{Papers that exceed the page limit will not be reviewed (or in any other way considered) for presentation at the conference.}
+% Additional pages \emph{containing acknowledgments, references, checklist, and optional technical appendices} do not count as content pages. 
+
+
+% The margins in 2026 are the same as those in previous years.
+
+
+% Authors are required to use the NeurIPS \LaTeX{} style files obtainable at the NeurIPS website as indicated below. Please make sure you use the current files and not previous versions. Tweaking the style files may be grounds for desk rejection.
+
+
+% \subsection{Retrieval of style files}
+
+
+% The style files for NeurIPS and other conference information are available on the website at
+% \begin{center}
+%   \url{https://neurips.cc}.
+% \end{center}
+% % The file \verb+neurips_2026.pdf+ contains these instructions and illustrates the various formatting requirements your NeurIPS paper must satisfy.
+
+
+% The only supported style file for NeurIPS 2026 is \verb+neurips_2026.sty+, rewritten for \LaTeXe{}. \textbf{Previous style files for \LaTeX{} 2.09,  Microsoft Word, and RTF are no longer supported.}
+
+
+% The \LaTeX{} style file contains three optional arguments: 
+% \begin{itemize}
+% \item \verb+final+, which creates a camera-ready copy, 
+% \item \verb+preprint+, which creates a preprint for submission to, e.g., arXiv, \item \verb+nonatbib+, which will not load the \verb+natbib+ package for you in case of package clash.
+% \end{itemize}
+
+
+% \paragraph{Preprint option}
+% If you wish to post a preprint of your work online, e.g., on arXiv, using the NeurIPS style, please use the \verb+preprint+ option. This will create a nonanonymized version of your work with the text ``Preprint. Work in progress.'' in the footer. This version may be distributed as you see fit, as long as you do not say which conference it was submitted to. Please \textbf{do not} use the \verb+final+ option, which should \textbf{only} be used for papers accepted to NeurIPS.
+
+
+% At submission time, please omit the \verb+final+ and \verb+preprint+ options. This will anonymize your submission and add line numbers to aid review. Please do \emph{not} refer to these line numbers in your paper as they will be removed during generation of camera-ready copies.
+
+
+% The file \verb+neurips_2026.tex+ may be used as a ``shell'' for writing your paper. All you have to do is replace the author, title, abstract, and text of the paper with your own.
+
+
+% The formatting instructions contained in these style files are summarized in Sections \ref{gen_inst}, \ref{headings}, and \ref{others} below.
+
+
+% \section{General formatting instructions}
+% \label{gen_inst}
+
+
+% The text must be confined within a rectangle 5.5~inches (33~picas) wide and
+% 9~inches (54~picas) long. The left margin is 1.5~inch (9~picas).  Use 10~point
+% type with a vertical spacing (leading) of 11~points.  Times New Roman is the
+% preferred typeface throughout, and will be selected for you by default.
+% Paragraphs are separated by \nicefrac{1}{2}~line space (5.5 points), with no
+% indentation.
+
+
+% The paper title should be 17~point, initial caps/lower case, bold, centered
+% between two horizontal rules. The top rule should be 4~points thick and the
+% bottom rule should be 1~point thick. Allow \nicefrac{1}{4}~inch space above and
+% below the title to rules. All pages should start at 1~inch (6~picas) from the
+% top of the page.
+
+
+% For the final version, authors' names are set in boldface, and each name is
+% centered above the corresponding address. The lead author's name is to be listed
+% first (left-most), and the co-authors' names (if different address) are set to
+% follow. If there is only one co-author, list both author and co-author side by
+% side.
+
+
+% Please pay special attention to the instructions in Section \ref{others}
+% regarding figures, tables, acknowledgments, and references.
+
+% \section{Headings: first level}
+% \label{headings}
+
+
+% All headings should be lower case (except for first word and proper nouns),
+% flush left, and bold.
+
+
+% First-level headings should be in 12-point type.
+
+
+% \subsection{Headings: second level}
+
+
+% Second-level headings should be in 10-point type.
+
+
+% \subsubsection{Headings: third level}
+
+
+% Third-level headings should be in 10-point type.
+
+
+% \paragraph{Paragraphs}
+
+
+% There is also a \verb+\paragraph+ command available, which sets the heading in
+% bold, flush left, and inline with the text, with the heading followed by 1\,em
+% of space.
+
+
+% \section{Citations, figures, tables, references}
+% \label{others}
+
+
+% These instructions apply to everyone.
+
+
+% \subsection{Citations within the text}
+
+
+% The \verb+natbib+ package will be loaded for you by default.  Citations may be
+% author/year or numeric, as long as you maintain internal consistency.  As to the
+% format of the references themselves, any style is acceptable as long as it is
+% used consistently.
+
+
+% The documentation for \verb+natbib+ may be found at
+% \begin{center}
+%   \url{http://mirrors.ctan.org/macros/latex/contrib/natbib/natnotes.pdf}
+% \end{center}
+% Of note is the command \verb+\citet+, which produces citations appropriate for
+% use in inline text.  For example,
+% \begin{verbatim}
+%    \citet{hasselmo} investigated\dots
+% \end{verbatim}
+% produces
+% \begin{quote}
+%   Hasselmo, et al.\ (1995) investigated\dots
+% \end{quote}
+
+
+% If you wish to load the \verb+natbib+ package with options, you may add the
+% following before loading the \verb+neurips_2026+ package:
+% \begin{verbatim}
+%    \PassOptionsToPackage{options}{natbib}
+% \end{verbatim}
+
+
+% If \verb+natbib+ clashes with another package you load, you can add the optional
+% argument \verb+nonatbib+ when loading the style file:
+% \begin{verbatim}
+%    \usepackage[nonatbib]{neurips_2026}
+% \end{verbatim}
+
+
+% As submission is double blind, refer to your own published work in the third
+% person. That is, use ``In the previous work of Jones et al.\ [4],'' not ``In our
+% previous work [4].'' If you cite your other papers that are not widely available
+% (e.g., a journal paper under review), use anonymous author names in the
+% citation, e.g., an author of the form ``A.\ Anonymous'' and include a copy of the anonymized paper in the supplementary material.
+
+
+% \subsection{Footnotes}
+
+
+% Footnotes should be used sparingly.  If you do require a footnote, indicate
+% footnotes with a number\footnote{Sample of the first footnote.} in the
+% text. Place the footnotes at the bottom of the page on which they appear.
+% Precede the footnote with a horizontal rule of 2~inches (12~picas).
+
+
+% Note that footnotes are properly typeset \emph{after} punctuation
+% marks.\footnote{As in this example.}
+
+
+% \subsection{Figures}
+
+
+% \begin{figure}
+%   \centering
+%   \fbox{\rule[-.5cm]{0cm}{4cm} \rule[-.5cm]{4cm}{0cm}}
+%   \caption{Sample figure caption. Explain what the figure shows and add a key take-away message to the caption.}
+% \end{figure}
+
+
+% All artwork must be neat, clean, and legible. Lines should be dark enough for
+%  reproduction purposes. The figure number and caption always appear after the
+% figure. Place one line space before the figure caption and one line space after
+% the figure. The figure caption should be lower case (except for the first word and proper nouns); figures are numbered consecutively.
+
+
+% You may use color figures.  However, it is best for the figure captions and the
+% paper body to be legible if the paper is printed in either black/white or in
+% color.
+
+
+% \subsection{Tables}
+
+
+% All tables must be centered, neat, clean, and legible.  The table number and
+% title always appear before the table.  See Table~\ref{sample-table}.
+
+
+% Place one line space before the table title, one line space after the
+% table title, and one line space after the table. The table title must
+% be lower case (except for the first word and proper nouns); tables are
+% numbered consecutively.
+
+
+% Note that publication-quality tables \emph{do not contain vertical rules}. We
+% strongly suggest the use of the \verb+booktabs+ package, which allows for
+% typesetting high-quality, professional tables:
+% \begin{center}
+%   \url{https://www.ctan.org/pkg/booktabs}
+% \end{center}
+% This package was used to typeset Table~\ref{sample-table}.
+
+
+% \begin{table}
+%   \caption{Sample table caption. Explain what the table shows and add a key take-away message to the caption.}
+%   \label{sample-table}
+%   \centering
+%   \begin{tabular}{lll}
+%     \toprule
+%     \multicolumn{2}{c}{Part}                   \\
+%     \cmidrule(r){1-2}
+%     Name     & Description     & Size ($\mu$m) \\
+%     \midrule
+%     Dendrite & Input terminal  & $\approx$100     \\
+%     Axon     & Output terminal & $\approx$10      \\
+%     Soma     & Cell body       & up to $10^6$  \\
+%     \bottomrule
+%   \end{tabular}
+% \end{table}
+
+% \subsection{Math}
+% Note that display math in bare TeX commands will not create correct line numbers for submission. Please use LaTeX (or AMSTeX) commands for unnumbered display math. (You really shouldn't be using \$\$ anyway; see \url{https://tex.stackexchange.com/questions/503/why-is-preferable-to} and \url{https://tex.stackexchange.com/questions/40492/what-are-the-differences-between-align-equation-and-displaymath} for more information.)
+
+% \subsection{Final instructions}
+
+% Do not change any aspects of the formatting parameters in the style files.  In
+% particular, do not modify the width or length of the rectangle the text should
+% fit into, and do not change font sizes. Please note that pages should be
+% numbered.
+
+
+% \section{Preparing PDF files}
+
+
+% Please prepare submission files with paper size ``US Letter,'' and not, for
+% example, ``A4.''
+
+
+% Fonts were the main cause of problems in the past years. Your PDF file must only
+% contain Type 1 or Embedded TrueType fonts. Here are a few instructions to
+% achieve this.
+
+
+% \begin{itemize}
+
+
+% \item You should directly generate PDF files using \verb+pdflatex+.
+
+
+% \item You can check which fonts a PDF files uses.  In Acrobat Reader, select the
+%   menu Files$>$Document Properties$>$Fonts and select Show All Fonts. You can
+%   also use the program \verb+pdffonts+ which comes with \verb+xpdf+ and is
+%   available out-of-the-box on most Linux machines.
+
+
+% \item \verb+xfig+ ``patterned'' shapes are implemented with bitmap fonts.  Use
+%   "solid" shapes instead.
+
+
+% \item The \verb+\bbold+ package almost always uses bitmap fonts.  You should use
+%   the equivalent AMS Fonts:
+% \begin{verbatim}
+%    \usepackage{amsfonts}
+% \end{verbatim}
+% followed by, e.g., \verb+\mathbb{R}+, \verb+\mathbb{N}+, or \verb+\mathbb{C}+
+% for $\mathbb{R}$, $\mathbb{N}$ or $\mathbb{C}$.  You can also use the following
+% workaround for reals, natural and complex:
+% \begin{verbatim}
+%    \newcommand{\RR}{I\!\!R} %real numbers
+%    \newcommand{\Nat}{I\!\!N} %natural numbers
+%    \newcommand{\CC}{I\!\!\!\!C} %complex numbers
+% \end{verbatim}
+% Note that \verb+amsfonts+ is automatically loaded by the \verb+amssymb+ package.
+
+
+% \end{itemize}
+
+
+% If your file contains type 3 fonts or non embedded TrueType fonts, we will ask
+% you to fix it.
+
+
+% \subsection{Margins in \LaTeX{}}
+
+
+% Most of the margin problems come from figures positioned by hand using
+% \verb+\special+ or other commands. We suggest using the command
+% \verb+\includegraphics+ from the \verb+graphicx+ package. Always specify the
+% figure width as a multiple of the line width as in the example below:
+% \begin{verbatim}
+%    \usepackage[pdftex]{graphicx} ...
+%    \includegraphics[width=0.8\linewidth]{myfile.pdf}
+% \end{verbatim}
+% See Section 4.4 in the graphics bundle documentation
+% (\url{http://mirrors.ctan.org/macros/latex/required/graphics/grfguide.pdf})
+
+
+% A number of width problems arise when \LaTeX{} cannot properly hyphenate a
+% line. Please give LaTeX hyphenation hints using the \verb+\-+ command when
+% necessary.
+
+% \begin{ack}
+% Use unnumbered first level headings for the acknowledgments. All acknowledgments
+% go at the end of the paper before the list of references. Moreover, you are required to declare
+% funding (financial activities supporting the submitted work) and competing interests (related financial activities outside the submitted work).
+% More information about this disclosure can be found at: \url{https://neurips.cc/Conferences/2026/PaperInformation/FundingDisclosure}.
+
+
+% Do {\bf not} include this section in the anonymized submission, only in the final paper. You can use the \texttt{ack} environment provided in the style file to automatically hide this section in the anonymized submission.
+% \end{ack}
+
+% \section*{References}
+
+
+% References follow the acknowledgments in the camera-ready paper. Use unnumbered first-level heading for
+% the references. Any choice of citation style is acceptable as long as you are
+% consistent. It is permissible to reduce the font size to \verb+small+ (9 point)
+% when listing the references.
+% Note that the Reference section does not count towards the page limit.
+% \medskip
+
+
+% {
+% \small
+
+
+% [1] Alexander, J.A.\ \& Mozer, M.C.\ (1995) Template-based algorithms for
+% connectionist rule extraction. In G.\ Tesauro, D.S.\ Touretzky and T.K.\ Leen
+% (eds.), {\it Advances in Neural Information Processing Systems 7},
+% pp.\ 609--616. Cambridge, MA: MIT Press.
+
+
+% [2] Bower, J.M.\ \& Beeman, D.\ (1995) {\it The Book of GENESIS: Exploring
+%   Realistic Neural Models with the GEneral NEural SImulation System.}  New York:
+% TELOS/Springer--Verlag.
+
+
+% [3] Hasselmo, M.E., Schnell, E.\ \& Barkai, E.\ (1995) Dynamics of learning and
+% recall at excitatory recurrent synapses and cholinergic modulation in rat
+% hippocampal region CA3. {\it Journal of Neuroscience} {\bf 15}(7):5249-5262.
+% }
+
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% \appendix
+
+% \section{Technical appendices and supplementary material}
+% Technical appendices with additional results, figures, graphs, and proofs may be submitted with the paper submission before the full submission deadline (see above). You can upload a ZIP file for videos or code, but do not upload a separate PDF file for the appendix. There is no page limit for the technical appendices. 
+
+% Note: Think of the appendix as ``optional reading'' for reviewers. The paper must be able to stand alone without the appendix; for example, adding critical experiments that support the main claims to an appendix is inappropriate. 
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% \newpage
+% \input{checklist.tex}
+
+
+\end{document}
