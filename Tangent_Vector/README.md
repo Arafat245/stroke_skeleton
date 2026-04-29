@@ -7,7 +7,9 @@ This folder contains the aligned-tangent experiments for stroke gait analysis. T
 3. Baseline scripts in `baselines/` for TCN, LSTM, Transformer, and STGCN.
 4. `../official_compare/` for the adapted official Sparse-ST-GCN runner.
 
-All runs use the same subject-level cross-validation scheme from `val_test.py` unless noted otherwise. Metrics are pooled across 30 folds, with subject bootstrap confidence intervals where available.
+All runs use the same subject-level cross-validation scheme from
+`val_test.py` unless noted otherwise. The result tables below report
+pooled out-of-fold means with `95% CI` from subject-level bootstrap.
 
 ## What Each File Does
 
@@ -160,31 +162,32 @@ python official_compare/sparse_stgcn_runner.py --representation tangent --task c
 
 ## Regression Comparison
 
-Test metrics pooled across folds.
+Pooled test metrics, mean `(95% CI)`.
 
-| Method | MAE | RMSE | R2 | Pearson r |
-| --- | ---: | ---: | ---: | ---: |
-| ES-VAE Geodesic | 1.246 | 2.818 | 0.740 | 0.862 |
-| PCA aligned (best classical) | 1.312 | 3.027 | 0.700 | 0.839 |
-| Sparse-ST-GCN (official adaptation) | 2.497 | 5.066 | 0.160 | 0.497 |
-| TCN tangent | 1.743 | 3.388 | 0.624 | 0.825 |
-| LSTM tangent | 1.699 | 3.219 | 0.661 | 0.813 |
-| Transformer tangent | 1.602 | 3.229 | 0.659 | 0.815 |
-| STGCN tangent | 2.081 | 3.514 | 0.596 | 0.773 |
+| Method | MAE (95% CI) | RMSE (95% CI) | R2 (95% CI) | Pearson r (95% CI) |
+| --- | --- | --- | --- | --- |
+| ES-VAE Geodesic | 1.246 (0.941, 1.537) | 2.818 (2.292, 3.212) | 0.740 (0.659, 0.817) | 0.862 (0.823, 0.906) |
+| PCA aligned (best classical, KNN) | 1.312 (0.985, 1.625) | 3.027 (2.387, 3.482) | 0.700 (0.594, 0.802) | 0.839 (0.784, 0.898) |
+| Sparse-ST-GCN (official adaptation) | 2.497 (1.947, 2.992) | 5.066 (4.200, 5.731) | 0.160 (-0.027, 0.328) | 0.497 (0.331, 0.627) |
+| TCN tangent | 1.743 (1.402, 2.082) | 3.388 (2.786, 3.860) | 0.624 (0.471, 0.748) | 0.825 (0.768, 0.886) |
+| LSTM tangent | 1.699 (1.368, 2.014) | 3.219 (2.582, 3.686) | 0.661 (0.566, 0.753) | 0.813 (0.758, 0.870) |
+| Transformer tangent | 1.602 (1.257, 1.936) | 3.229 (2.522, 3.725) | 0.659 (0.580, 0.754) | 0.815 (0.766, 0.873) |
+| STGCN tangent | 2.081 (1.733, 2.403) | 3.514 (2.928, 3.991) | 0.596 (0.458, 0.706) | 0.773 (0.688, 0.844) |
 
 ## Classification Comparison
 
-Test metrics pooled across folds. Macro-F1 is the main score to watch because the lesion classes are imbalanced.
+Pooled test metrics, mean `(95% CI)`. Macro-F1 is the main score to
+watch because the lesion classes are imbalanced.
 
-| Method | Accuracy | Macro F1 | Macro Precision | Macro Recall |
-| --- | ---: | ---: | ---: | ---: |
-| ES-VAE Geodesic | 0.916 | 0.825 | 0.856 | 0.805 |
-| PCA aligned (best classical) | 0.910 | 0.795 | 0.861 | 0.764 |
-| Sparse-ST-GCN (official adaptation) | 0.716 | 0.278 | 0.239 | 0.333 |
-| TCN tangent | 0.897 | 0.752 | 0.781 | 0.745 |
-| LSTM tangent | 0.871 | 0.699 | 0.814 | 0.667 |
-| Transformer tangent | 0.839 | 0.626 | 0.755 | 0.599 |
-| STGCN tangent | 0.800 | 0.476 | 0.500 | 0.478 |
+| Method | Accuracy (95% CI) | Macro F1 (95% CI) | Macro Precision (95% CI) | Macro Recall (95% CI) |
+| --- | --- | --- | --- | --- |
+| ES-VAE Geodesic | 0.916 (0.885, 0.949) | 0.825 (0.754, 0.897) | 0.856 (0.790, 0.931) | 0.805 (0.728, 0.886) |
+| PCA aligned (best classical, MLP) | 0.910 (0.876, 0.945) | 0.795 (0.704, 0.873) | 0.861 (0.785, 0.932) | 0.764 (0.680, 0.847) |
+| Sparse-ST-GCN (official adaptation) | 0.716 (0.663, 0.771) | 0.278 (0.266, 0.290) | 0.239 (0.221, 0.257) | 0.333 (0.333, 0.333) |
+| TCN tangent | 0.897 (0.862, 0.935) | 0.752 (0.660, 0.834) | 0.781 (0.681, 0.893) | 0.745 (0.664, 0.827) |
+| LSTM tangent | 0.871 (0.832, 0.914) | 0.699 (0.598, 0.787) | 0.814 (0.688, 0.914) | 0.667 (0.586, 0.745) |
+| Transformer tangent | 0.839 (0.798, 0.883) | 0.626 (0.513, 0.711) | 0.755 (0.507, 0.871) | 0.599 (0.520, 0.671) |
+| STGCN tangent | 0.800 (0.753, 0.847) | 0.476 (0.421, 0.523) | 0.500 (0.439, 0.561) | 0.478 (0.429, 0.526) |
 
 ## Output Files
 
