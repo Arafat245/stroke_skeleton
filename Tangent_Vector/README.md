@@ -5,6 +5,7 @@ This folder contains the aligned-tangent experiments for stroke gait analysis. T
 1. ES-VAE notebooks with geodesic loss.
 2. A PCA baseline notebook on aligned data.
 3. Baseline scripts in `baselines/` for TCN, LSTM, Transformer, and STGCN.
+4. `../official_compare/` for the adapted official Sparse-ST-GCN runner.
 
 All runs use the same subject-level cross-validation scheme from `val_test.py` unless noted otherwise. Metrics are pooled across 30 folds, with subject bootstrap confidence intervals where available.
 
@@ -48,6 +49,9 @@ All runs expect the repository data layout to stay unchanged:
 - Regression labels: `labels_data/y_poma.txt`
 - Subject IDs: `labels_data/pids.txt`
 - Classification labels: `labels_data/demo_data.csv`
+  - The current classification task is the 3-class `LesionLeft` label
+    used by the saved baselines: `0 = LesionRight`, `1 = LesionLeft`,
+    `2 = Healthy`.
 
 The examples below use the default settings that were used for the saved results.
 
@@ -129,6 +133,23 @@ python sequence_regclf_tangent.py --model stgcn --normalize-input --n-folds 30
 - Input: `../aligned_data/tangent_vecs200.pkl`, `../labels_data/y_poma.txt`, `../labels_data/demo_data.csv`, `../labels_data/pids.txt`
 - Output: `baselines/results/stgcn_results_with_ci.csv`
 
+### Sparse-ST-GCN Official Adaptation
+
+Run from repo root:
+
+```bash
+python official_compare/sparse_stgcn_runner.py --representation tangent --task regression --epochs 20 --batch-size 32 --device cuda:1
+python official_compare/sparse_stgcn_runner.py --representation tangent --task classification --epochs 20 --batch-size 32 --device cuda:0
+```
+
+- Input: `aligned_data/tangent_vecs200.pkl`, `labels_data/y_poma.txt`,
+  `labels_data/demo_data.csv`, `labels_data/pids.txt`
+- Output:
+  - `official_compare/results/sparse_stgcn_tangent_regression.json`
+  - `official_compare/results/sparse_stgcn_tangent_classification.json`
+- Notes: this is an official-style Sparse-ST-GCN backbone adapted to the
+  stroke 32-marker graph and the repo's existing 30-fold subject CV.
+
 ## Shared Evaluation Protocol
 
 - Input: tangent vectors loaded from `aligned_data/tangent_vecs200.pkl`.
@@ -145,6 +166,7 @@ Test metrics pooled across folds.
 | --- | ---: | ---: | ---: | ---: |
 | ES-VAE Geodesic | 1.246 | 2.818 | 0.740 | 0.862 |
 | PCA aligned (best classical) | 1.312 | 3.027 | 0.700 | 0.839 |
+| Sparse-ST-GCN (official adaptation) | 2.497 | 5.066 | 0.160 | 0.497 |
 | TCN tangent | 1.743 | 3.388 | 0.624 | 0.825 |
 | LSTM tangent | 1.699 | 3.219 | 0.661 | 0.813 |
 | Transformer tangent | 1.602 | 3.229 | 0.659 | 0.815 |
@@ -158,6 +180,7 @@ Test metrics pooled across folds. Macro-F1 is the main score to watch because th
 | --- | ---: | ---: | ---: | ---: |
 | ES-VAE Geodesic | 0.916 | 0.825 | 0.856 | 0.805 |
 | PCA aligned (best classical) | 0.910 | 0.795 | 0.861 | 0.764 |
+| Sparse-ST-GCN (official adaptation) | 0.716 | 0.278 | 0.239 | 0.333 |
 | TCN tangent | 0.897 | 0.752 | 0.781 | 0.745 |
 | LSTM tangent | 0.871 | 0.699 | 0.814 | 0.667 |
 | Transformer tangent | 0.839 | 0.626 | 0.755 | 0.599 |
@@ -171,11 +194,16 @@ The current saved summaries are:
 - `baselines/results/lstm_results_with_ci.csv`
 - `baselines/results/transformer_results_with_ci.csv`
 - `baselines/results/stgcn_results_with_ci.csv`
+- `../official_compare/results/sparse_stgcn_tangent_regression.json`
+- `../official_compare/results/sparse_stgcn_tangent_classification.json`
 
 Each CSV stores the pooled metric value and confidence interval bounds for its model.
 
 ## Notes
 
 - The tangent baselines were intentionally kept lightweight so they stay competitive but usually below ES-VAE.
+- The official Sparse-ST-GCN adaptation transfers cleanly as code, but
+  on this stroke tangent setup it underperforms the existing local
+  baselines, especially on the imbalanced 3-class lesion task.
 - The classification baselines use smaller classifier heads and reduced regularization compared with the regression paths when needed.
 - If you rerun the scripts with different epoch or width settings, the CSVs in `baselines/results/` will be overwritten.
