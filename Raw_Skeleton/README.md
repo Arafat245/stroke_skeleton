@@ -12,14 +12,10 @@ The two evaluated tasks are:
 
 ## Inputs
 
-Most raw baselines read processed gait-cycle tensors from the repo root:
+The raw pipeline reads processed gait-cycle tensors from the repo root:
 
 - `../data/processed_loaded.pt` for regression
 - `../data_clf/processed_loaded.pt` for classification
-
-The matched `Vanilla VAE + k-NN` baseline instead reads the original
-raw lab-frame trajectories from `../csv_r`, resamples them to `T=200`,
-and applies no geometric alignment.
 
 Each subject contributes:
 
@@ -44,9 +40,9 @@ intervals over pooled out-of-fold predictions.
 - `STGCN.ipynb` — raw STGCN baseline
 - `PCA_full_raw_unaligned.ipynb` — raw PCA baseline; the README tables
   report the `PCA + k-NN` rows from this notebook
-- `VAE_full_raw_unaligned.ipynb` — older exploratory raw VAE notebook
-- `vae_knn_raw_matched.py` — reportable raw `Vanilla VAE + k-NN`
-  baseline matched to the no-alignment ablation setup
+- `VAE_full_raw_unaligned.ipynb` — raw `Vanilla VAE + k-NN` baseline
+- `vae_knn_raw_matched.py` — auxiliary raw VAE runner matched to the
+  no-alignment ablation setup
 - `data_utils_load.py` — subject loading, train-fold standardization,
   gait batching
 - `val_test.py` — shared subject-fold construction
@@ -90,7 +86,7 @@ Pooled out-of-fold metrics, **mean (95% CI)**.
 | STGCN | 2.18 (1.80, 2.57) | 3.88 (3.08, 4.50) | 0.51 (0.34, 0.66) | 0.72 (0.64, 0.82) |
 | Transformer | 2.39 (2.00, 2.77) | 3.93 (3.19, 4.50) | 0.50 (0.29, 0.66) | 0.76 (0.69, 0.84) |
 | TCN | 2.66 (2.33, 2.98) | 3.83 (3.21, 4.30) | 0.52 (0.30, 0.67) | 0.79 (0.73, 0.85) |
-| Vanilla VAE + k-NN | 3.83 (3.30, 4.34) | 5.75 (5.00, 6.38) | -0.08 (-0.24, 0.04) | 0.16 (0.04, 0.29) |
+| Vanilla VAE + k-NN | 2.72 (2.33, 3.14) | 4.33 (3.77, 4.83) | 0.39 (0.26, 0.48) | 0.62 (0.52, 0.71) |
 | PCA + k-NN | 2.87 (2.48, 3.27) | 4.46 (3.91, 4.95) | 0.35 (0.23, 0.44) | 0.59 (0.49, 0.68) |
 
 ### Classification
@@ -104,13 +100,13 @@ Pooled out-of-fold metrics, **mean (95% CI)**.
 | Sparse-ST-GCN | 0.73 (0.65, 0.79) | 0.48 (0.40, 0.55) | 0.75 (0.65, 0.83) | 0.49 (0.43, 0.56) |
 | Hyper-GCN | 0.76 (0.71, 0.81) | 0.47 (0.41, 0.54) | 0.48 (0.41, 0.55) | 0.47 (0.40, 0.54) |
 | STGCN | 0.75 (0.70, 0.81) | 0.39 (0.33, 0.44) | 0.48 (0.38, 0.59) | 0.40 (0.36, 0.44) |
-| Vanilla VAE + k-NN | 0.67 (0.62, 0.73) | 0.37 (0.32, 0.42) | 0.39 (0.32, 0.46) | 0.37 (0.33, 0.41) |
+| Vanilla VAE + k-NN | 0.81 (0.76, 0.86) | 0.61 (0.51, 0.69) | 0.68 (0.51, 0.85) | 0.58 (0.51, 0.66) |
 
 ## Tangent vs Raw — same-method comparison
 
 | Method | Tangent MAE | Raw MAE | Δ MAE (Raw - Tangent) | Tangent Macro F1 | Raw Macro F1 | Δ Macro F1 |
 |---|---:|---:|---:|---:|---:|---:|
-| ES-VAE / Vanilla VAE + k-NN | 1.25 | 3.83 | **+2.58** | 0.83 | 0.37 | **+0.46** |
+| ES-VAE / Vanilla VAE + k-NN | 1.25 | 2.72 | **+1.47** | 0.83 | 0.61 | **+0.22** |
 | PCA + k-NN | 1.31 | 2.87 | **+1.56** | 0.79 | 0.55 | **+0.24** |
 | Sparse-ST-GCN | 1.50 | 1.70 | +0.20 | 0.53 | 0.48 | +0.05 |
 | TCN | 1.74 | 2.66 | +0.92 | 0.75 | 0.64 | +0.11 |
@@ -124,10 +120,9 @@ Pooled out-of-fold metrics, **mean (95% CI)**.
 - The raw tables intentionally report `PCA + k-NN` rather than the best
   arbitrary classical model, so the comparison with `ES-VAE + k-NN` is
   fair.
-- The reportable raw `Vanilla VAE + k-NN` row now comes from
-  `vae_knn_raw_matched.py`, which matches the no-alignment ablation
-  setup. The older `VAE_full_raw_unaligned.ipynb` notebook is kept only
-  as exploratory history.
+- The raw `Vanilla VAE + k-NN` row comes from
+  `VAE_full_raw_unaligned.ipynb` and is included in both regression and
+  classification tables.
 - After light task-specific tuning, `Sparse-ST-GCN` becomes a much more
   reasonable raw classification baseline, improving from a collapsed
   `0.22` Macro F1 run to `0.48`.
