@@ -81,3 +81,5 @@ rvae_papers/**/MSRAction3DSkeletonReal3D/
 # Generated summaries and caches
 Tangent_Vector/baselines/results/
 official_compare/results/pilot_*.json
+official_compare/results/*.json
+Raw_Skeleton/results_matched/*.json
