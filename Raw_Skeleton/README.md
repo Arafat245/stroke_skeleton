@@ -66,7 +66,7 @@ From repo root, for the adapted graph baselines:
 python official_compare/hypergcn_runner.py --representation raw --task regression --epochs 20 --batch-size 64 --reg-calibration linear --output-name hypergcn_raw_regression_tuned.json
 python official_compare/hypergcn_runner.py --representation raw --task classification --epochs 20 --batch-size 64
 python official_compare/sparse_stgcn_runner.py --representation raw --task regression --epochs 30 --batch-size 32 --lr 0.01 --warmup 5 --reg-balance-mode inverse --reg-calibration linear --output-name sparse_raw_regression_tuned.json
-python official_compare/sparse_stgcn_runner.py --representation raw --task classification --epochs 20 --batch-size 32
+python official_compare/sparse_stgcn_runner.py --representation raw --task classification --epochs 30 --patience 10 --batch-size 32 --lr 0.01 --label-smoothing 0.0 --no-clf-balancing --warmup 5 --output-name sparse_stgcn_raw_classification_tuned.json
 ```
 
 ## Headline comparison (subject CV, 30 folds)
@@ -95,9 +95,9 @@ Pooled out-of-fold metrics, **mean (95% CI)**.
 | Vanilla VAE + k-NN | 0.81 (0.76, 0.86) | 0.61 (0.51, 0.69) | 0.68 (0.51, 0.85) | 0.58 (0.51, 0.66) |
 | LSTM | 0.81 (0.77, 0.86) | 0.56 (0.48, 0.63) | 0.57 (0.47, 0.67) | 0.56 (0.49, 0.62) |
 | PCA + k-NN | 0.74 (0.69, 0.80) | 0.55 (0.46, 0.62) | 0.55 (0.46, 0.64) | 0.55 (0.47, 0.63) |
+| Sparse-ST-GCN | 0.73 (0.65, 0.79) | 0.48 (0.40, 0.55) | 0.75 (0.65, 0.83) | 0.49 (0.43, 0.56) |
 | Hyper-GCN | 0.76 (0.71, 0.81) | 0.47 (0.41, 0.54) | 0.48 (0.41, 0.55) | 0.47 (0.40, 0.54) |
 | STGCN | 0.75 (0.70, 0.81) | 0.39 (0.33, 0.44) | 0.48 (0.38, 0.59) | 0.40 (0.36, 0.44) |
-| Sparse-ST-GCN | 0.24 (0.19, 0.29) | 0.22 (0.17, 0.26) | 0.41 (0.36, 0.46) | 0.38 (0.30, 0.45) |
 
 ## Tangent vs Raw — same-method comparison
 
@@ -105,7 +105,7 @@ Pooled out-of-fold metrics, **mean (95% CI)**.
 |---|---:|---:|---:|---:|---:|---:|
 | ES-VAE / Vanilla VAE + k-NN | 1.25 | 2.72 | **+1.47** | 0.83 | 0.61 | **+0.22** |
 | PCA + k-NN | 1.31 | 2.87 | **+1.56** | 0.79 | 0.55 | **+0.24** |
-| Sparse-ST-GCN | 1.50 | 1.70 | +0.20 | 0.28 | 0.22 | +0.06 |
+| Sparse-ST-GCN | 1.50 | 1.70 | +0.20 | 0.53 | 0.48 | +0.05 |
 | TCN | 1.74 | 2.66 | +0.92 | 0.75 | 0.64 | +0.11 |
 | LSTM | 1.70 | 1.49 | -0.21 | 0.70 | 0.56 | +0.14 |
 | Transformer | 1.60 | 2.39 | +0.79 | 0.63 | 0.63 | +0.00 |
@@ -120,6 +120,6 @@ Pooled out-of-fold metrics, **mean (95% CI)**.
 - The raw `Vanilla VAE + k-NN` row comes from
   `VAE_full_raw_unaligned.ipynb` and is included in both regression and
   classification tables.
-- After light regression-only tuning, both imported graph models become
-  reasonable raw-regression baselines, with `Hyper-GCN` stronger than
-  `Sparse-ST-GCN` on the raw side.
+- After light task-specific tuning, `Sparse-ST-GCN` becomes a much more
+  reasonable raw classification baseline, improving from a collapsed
+  `0.22` Macro F1 run to `0.48`.

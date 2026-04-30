@@ -106,16 +106,16 @@ bootstrap.
 |  | LSTM | 0.87 (0.83, 0.91) | 0.70 (0.60, 0.79) | 0.81 (0.69, 0.91) | 0.67 (0.59, 0.74) |
 |  | Transformer | 0.84 (0.80, 0.88) | 0.63 (0.51, 0.71) | 0.76 (0.51, 0.87) | 0.60 (0.52, 0.67) |
 |  | Hyper-GCN | 0.83 (0.78, 0.87) | 0.56 (0.50, 0.62) | 0.56 (0.49, 0.63) | 0.57 (0.51, 0.63) |
+|  | Sparse-ST-GCN | 0.79 (0.72, 0.86) | 0.53 (0.43, 0.62) | 0.73 (0.62, 0.85) | 0.49 (0.44, 0.55) |
 |  | STGCN | 0.80 (0.75, 0.85) | 0.48 (0.42, 0.52) | 0.50 (0.44, 0.56) | 0.48 (0.43, 0.53) |
-|  | Sparse-ST-GCN | 0.72 (0.66, 0.77) | 0.28 (0.27, 0.29) | 0.24 (0.22, 0.26) | 0.33 (0.33, 0.33) |
 | Raw Skeleton | **TCN** | **0.86 (0.81, 0.90)** | **0.64 (0.53, 0.72)** | **0.70 (0.53, 0.87)** | 0.62 (0.54, 0.69) |
 |  | Transformer | 0.81 (0.77, 0.86) | 0.63 (0.54, 0.70) | 0.63 (0.54, 0.72) | **0.63 (0.54, 0.72)** |
 |  | Vanilla VAE + k-NN | 0.81 (0.76, 0.86) | 0.61 (0.51, 0.69) | 0.68 (0.51, 0.85) | 0.58 (0.51, 0.66) |
 |  | LSTM | 0.81 (0.77, 0.86) | 0.56 (0.48, 0.63) | 0.57 (0.47, 0.67) | 0.56 (0.49, 0.62) |
 |  | PCA + k-NN | 0.74 (0.69, 0.80) | 0.55 (0.46, 0.62) | 0.55 (0.46, 0.64) | 0.55 (0.47, 0.63) |
+|  | Sparse-ST-GCN | 0.73 (0.65, 0.79) | 0.48 (0.40, 0.55) | 0.75 (0.65, 0.83) | 0.49 (0.43, 0.56) |
 |  | Hyper-GCN | 0.76 (0.71, 0.81) | 0.47 (0.41, 0.54) | 0.48 (0.41, 0.55) | 0.47 (0.40, 0.54) |
 |  | STGCN | 0.75 (0.70, 0.81) | 0.39 (0.33, 0.44) | 0.48 (0.38, 0.59) | 0.40 (0.36, 0.44) |
-|  | Sparse-ST-GCN | 0.24 (0.19, 0.29) | 0.22 (0.17, 0.26) | 0.41 (0.36, 0.46) | 0.38 (0.30, 0.45) |
 
 ### Tangent - Raw gaps under subject CV
 
@@ -127,7 +127,7 @@ better.
 |---|---:|---:|---:|---:|---:|---:|
 | ES-VAE / Vanilla VAE + k-NN | 1.25 | 2.72 | **+1.47** | 0.83 | 0.61 | **+0.22** |
 | PCA + k-NN | 1.31 | 2.87 | **+1.56** | 0.79 | 0.55 | **+0.24** |
-| Sparse-ST-GCN | 1.50 | 1.70 | +0.20 | 0.28 | 0.22 | +0.06 |
+| Sparse-ST-GCN | 1.50 | 1.70 | +0.20 | 0.53 | 0.48 | +0.05 |
 | TCN | 1.74 | 2.66 | +0.92 | 0.75 | 0.64 | +0.11 |
 | LSTM | 1.70 | 1.49 | -0.21 | 0.70 | 0.56 | +0.14 |
 | Transformer | 1.60 | 2.39 | +0.79 | 0.63 | 0.63 | +0.00 |
@@ -148,10 +148,11 @@ better.
 4. **Regression is more mixed.** Tangent wins for most families, but
    raw `LSTM` and raw `Hyper-GCN` outperform their tangent
    counterparts.
-5. **The adapted official graph baselines are now usable regression
-   baselines after light tuning.** `Sparse-ST-GCN` is the stronger
-   imported tangent regressor, while `Hyper-GCN` is the stronger
-   imported raw regressor.
+5. **The adapted official graph baselines become much more usable after
+   light task-specific tuning.** `Sparse-ST-GCN` improves sharply on
+   classification once the learning rate, balancing, smoothing, and
+   warmup are adjusted, while still remaining below the top ES-VAE /
+   PCA / TCN tangent baselines.
 
 ## Reproduce
 

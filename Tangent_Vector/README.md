@@ -63,7 +63,7 @@ From repo root, for the adapted graph baselines:
 python official_compare/hypergcn_runner.py --representation tangent --task regression --epochs 20 --batch-size 64 --reg-calibration linear --output-name hypergcn_tangent_regression_tuned.json
 python official_compare/hypergcn_runner.py --representation tangent --task classification --epochs 20 --batch-size 64
 python official_compare/sparse_stgcn_runner.py --representation tangent --task regression --epochs 30 --batch-size 32 --lr 0.01 --warmup 5 --reg-balance-mode inverse --reg-calibration linear --output-name sparse_tangent_regression_tuned.json
-python official_compare/sparse_stgcn_runner.py --representation tangent --task classification --epochs 20 --batch-size 32
+python official_compare/sparse_stgcn_runner.py --representation tangent --task classification --epochs 30 --patience 10 --batch-size 32 --lr 0.01 --label-smoothing 0.0 --clf-balance-mode inverse --warmup 5 --output-name sparse_stgcn_tangent_classification_tuned.json
 ```
 
 ## Headline comparison (subject CV, 30 folds)
@@ -93,8 +93,8 @@ Pooled out-of-fold metrics, **mean (95% CI)**.
 | LSTM | 0.87 (0.83, 0.91) | 0.70 (0.60, 0.79) | 0.81 (0.69, 0.91) | 0.67 (0.59, 0.74) |
 | Transformer | 0.84 (0.80, 0.88) | 0.63 (0.51, 0.71) | 0.76 (0.51, 0.87) | 0.60 (0.52, 0.67) |
 | Hyper-GCN | 0.83 (0.78, 0.87) | 0.56 (0.50, 0.62) | 0.56 (0.49, 0.63) | 0.57 (0.51, 0.63) |
+| Sparse-ST-GCN | 0.79 (0.72, 0.86) | 0.53 (0.43, 0.62) | 0.73 (0.62, 0.85) | 0.49 (0.44, 0.55) |
 | STGCN | 0.80 (0.75, 0.85) | 0.48 (0.42, 0.52) | 0.50 (0.44, 0.56) | 0.48 (0.43, 0.53) |
-| Sparse-ST-GCN | 0.72 (0.66, 0.77) | 0.28 (0.27, 0.29) | 0.24 (0.22, 0.26) | 0.33 (0.33, 0.33) |
 
 ## Tangent vs Raw — same-method comparison
 
@@ -102,7 +102,7 @@ Pooled out-of-fold metrics, **mean (95% CI)**.
 |---|---:|---:|---:|---:|---:|---:|
 | ES-VAE / Vanilla VAE + k-NN | 1.25 | 2.72 | **+1.47** | 0.83 | 0.61 | **+0.22** |
 | PCA + k-NN | 1.31 | 2.87 | **+1.56** | 0.79 | 0.55 | **+0.24** |
-| Sparse-ST-GCN | 1.50 | 1.70 | +0.20 | 0.28 | 0.22 | +0.06 |
+| Sparse-ST-GCN | 1.50 | 1.70 | +0.20 | 0.53 | 0.48 | +0.05 |
 | TCN | 1.74 | 2.66 | +0.92 | 0.75 | 0.64 | +0.11 |
 | LSTM | 1.70 | 1.49 | -0.21 | 0.70 | 0.56 | +0.14 |
 | Transformer | 1.60 | 2.39 | +0.79 | 0.63 | 0.63 | +0.00 |
@@ -115,6 +115,8 @@ Pooled out-of-fold metrics, **mean (95% CI)**.
   best arbitrary classical classifier, so the comparison with
   `ES-VAE + k-NN` is fair.
 - `Sparse-ST-GCN` is the stronger imported tangent regressor after the
-  light regression-only tuning used here.
+  light regression-only tuning used here, and with quick
+  classification-specific tuning it also improves from `0.28` to `0.53`
+  Macro F1.
 - `ES-VAE + k-NN` remains the strongest tangent-side model overall on
   both tasks.
