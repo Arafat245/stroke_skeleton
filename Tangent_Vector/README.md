@@ -140,35 +140,38 @@ python sequence_regclf_tangent.py --model stgcn --normalize-input --n-folds 30
 Run from repo root:
 
 ```bash
-python official_compare/sparse_stgcn_runner.py --representation tangent --task regression --epochs 20 --batch-size 32 --device cuda:1
+python official_compare/sparse_stgcn_runner.py --representation tangent --task regression --epochs 30 --batch-size 32 --device cuda:1 --lr 0.01 --warmup 5 --reg-balance-mode inverse --reg-calibration linear
 python official_compare/sparse_stgcn_runner.py --representation tangent --task classification --epochs 20 --batch-size 32 --device cuda:0
 ```
 
 - Input: `aligned_data/tangent_vecs200.pkl`, `labels_data/y_poma.txt`,
   `labels_data/demo_data.csv`, `labels_data/pids.txt`
 - Output:
-  - `official_compare/results/sparse_stgcn_tangent_regression.json`
+  - `official_compare/results/sparse_tangent_regression_tuned.json`
   - `official_compare/results/sparse_stgcn_tangent_classification.json`
 - Notes: this is an official-style Sparse-ST-GCN backbone adapted to the
   stroke 32-marker graph and the repo's existing 30-fold subject CV.
+  The tuned regression setting uses inverse POMA balancing plus a simple
+  validation-fit linear calibrator.
 
 ### Hyper-GCN Official Adaptation
 
 Run from repo root:
 
 ```bash
-python official_compare/hypergcn_runner.py --representation tangent --task regression --epochs 20 --batch-size 64 --device cuda:1
+python official_compare/hypergcn_runner.py --representation tangent --task regression --epochs 20 --batch-size 64 --device cuda:1 --reg-calibration linear
 python official_compare/hypergcn_runner.py --representation tangent --task classification --epochs 20 --batch-size 64 --device cuda:0
 ```
 
 - Input: `aligned_data/tangent_vecs200.pkl`, `labels_data/y_poma.txt`,
   `labels_data/demo_data.csv`, `labels_data/pids.txt`
 - Output:
-  - `official_compare/results/hypergcn_tangent_regression.json`
+  - `official_compare/results/hypergcn_tangent_regression_tuned.json`
   - `official_compare/results/hypergcn_tangent_classification.json`
 - Notes: this Hyper-GCN runner uses one subject sequence by default to
   mirror the lighter activity-recognition adaptation. Add `--multi-clip`
-  if you want the heavier stroke-style clip expansion.
+  if you want the heavier stroke-style clip expansion. The tuned
+  regression setting adds a simple validation-fit linear calibrator.
 
 ## Shared Evaluation Protocol
 
@@ -186,8 +189,8 @@ Pooled test metrics, mean `(95% CI)`.
 | --- | --- | --- | --- | --- |
 | ES-VAE Geodesic | 1.25 (0.94, 1.54) | 2.82 (2.29, 3.21) | 0.74 (0.66, 0.82) | 0.86 (0.82, 0.91) |
 | PCA aligned (best classical, KNN) | 1.31 (0.98, 1.62) | 3.03 (2.39, 3.48) | 0.70 (0.59, 0.80) | 0.84 (0.78, 0.90) |
-| Hyper-GCN (official adaptation) | 2.69 (2.05, 3.31) | 5.75 (4.79, 6.53) | -0.08 (-0.47, 0.23) | 0.58 (0.45, 0.69) |
-| Sparse-ST-GCN (official adaptation) | 2.50 (1.95, 2.99) | 5.07 (4.20, 5.73) | 0.16 (-0.03, 0.33) | 0.50 (0.33, 0.63) |
+| Hyper-GCN (official adaptation) | 1.79 (1.35, 2.20) | 3.86 (3.09, 4.43) | 0.51 (0.36, 0.65) | 0.74 (0.66, 0.82) |
+| Sparse-ST-GCN (official adaptation) | 1.50 (1.12, 1.85) | 3.36 (2.56, 3.88) | 0.63 (0.50, 0.76) | 0.80 (0.72, 0.87) |
 | TCN tangent | 1.74 (1.40, 2.08) | 3.39 (2.79, 3.86) | 0.62 (0.47, 0.75) | 0.83 (0.77, 0.89) |
 | LSTM tangent | 1.70 (1.37, 2.01) | 3.22 (2.58, 3.69) | 0.66 (0.57, 0.75) | 0.81 (0.76, 0.87) |
 | Transformer tangent | 1.60 (1.26, 1.94) | 3.23 (2.52, 3.73) | 0.66 (0.58, 0.75) | 0.81 (0.77, 0.87) |
@@ -217,9 +220,9 @@ The current saved summaries are:
 - `baselines/results/lstm_results_with_ci.csv`
 - `baselines/results/transformer_results_with_ci.csv`
 - `baselines/results/stgcn_results_with_ci.csv`
-- `../official_compare/results/hypergcn_tangent_regression.json`
+- `../official_compare/results/hypergcn_tangent_regression_tuned.json`
 - `../official_compare/results/hypergcn_tangent_classification.json`
-- `../official_compare/results/sparse_stgcn_tangent_regression.json`
+- `../official_compare/results/sparse_tangent_regression_tuned.json`
 - `../official_compare/results/sparse_stgcn_tangent_classification.json`
 
 Each CSV stores the pooled metric value and confidence interval bounds for its model.
@@ -227,11 +230,12 @@ Each CSV stores the pooled metric value and confidence interval bounds for its m
 ## Notes
 
 - The tangent baselines were intentionally kept lightweight so they stay competitive but usually below ES-VAE.
-- Hyper-GCN is the stronger imported tangent baseline, especially for
-  classification, but it still stays below ES-VAE and the best local
-  tangent models.
+- Hyper-GCN is the stronger imported tangent classifier, and after
+  light regression calibration it also becomes a reasonable POMA
+  regressor.
 - The official Sparse-ST-GCN adaptation transfers cleanly as code, but
-  on this stroke tangent setup it underperforms the existing local
-  baselines, especially on the imbalanced 3-class lesion task.
+  on this stroke tangent setup it still underperforms the best tangent
+  classifiers. Its tuned regression path, however, is much stronger
+  than the original straight port.
 - The classification baselines use smaller classifier heads and reduced regularization compared with the regression paths when needed.
 - If you rerun the scripts with different epoch or width settings, the CSVs in `baselines/results/` will be overwritten.

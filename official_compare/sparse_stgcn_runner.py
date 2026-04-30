@@ -235,6 +235,33 @@ def cosine_lr(base_lr: float, epoch: int, total_epochs: int) -> float:
     return base_lr * 0.5 * (1.0 + np.cos(np.pi * epoch / total_epochs))
 
 
+def sample_weights_from_targets(targets: np.ndarray, mode: str) -> np.ndarray | None:
+    if mode == "none":
+        return None
+    values, counts = np.unique(targets, return_counts=True)
+    counts = counts.astype(np.float32)
+    if mode == "sqrt":
+        value_weights = 1.0 / np.sqrt(counts)
+    elif mode == "inverse":
+        value_weights = 1.0 / counts
+    else:
+        raise ValueError(f"Unknown balance mode: {mode}")
+    weight_map = {value: weight for value, weight in zip(values.tolist(), value_weights.tolist())}
+    return np.asarray([weight_map[value] for value in targets.tolist()], dtype=np.float32)
+
+
+def fit_linear_calibrator(preds: np.ndarray, targets: np.ndarray) -> tuple[float, float]:
+    preds = np.asarray(preds, dtype=np.float32)
+    targets = np.asarray(targets, dtype=np.float32)
+    if preds.size < 2 or float(preds.std()) < 1e-6:
+        return 1.0, 0.0
+    design = np.stack([preds, np.ones_like(preds)], axis=1)
+    slope, intercept = np.linalg.lstsq(design, targets, rcond=None)[0]
+    if not np.isfinite(slope) or not np.isfinite(intercept):
+        return 1.0, 0.0
+    return float(slope), float(intercept)
+
+
 def make_train_windows(
     representation: str,
     sequences,
@@ -262,14 +289,11 @@ def build_classification_loader(
     targets: np.ndarray,
     batch_size: int,
     seed: int,
-    use_balancing: bool,
+    balance_mode: str,
 ) -> DataLoader:
     dataset = WindowDataset(windows, targets)
-    if use_balancing:
-        class_counts = np.bincount(targets, minlength=int(targets.max()) + 1).astype(np.float32)
-        class_counts[class_counts == 0] = 1.0
-        class_weights = 1.0 / np.sqrt(class_counts)
-        sample_weights = class_weights[targets]
+    sample_weights = sample_weights_from_targets(targets.astype(np.int64), balance_mode)
+    if sample_weights is not None:
         sampler = WeightedRandomSampler(
             weights=torch.as_tensor(sample_weights, dtype=torch.double),
             num_samples=len(sample_weights),
@@ -286,8 +310,24 @@ def build_classification_loader(
     )
 
 
-def build_regression_loader(windows: np.ndarray, targets: np.ndarray, batch_size: int, seed: int) -> DataLoader:
+def build_regression_loader(
+    windows: np.ndarray,
+    targets: np.ndarray,
+    batch_size: int,
+    seed: int,
+    balance_mode: str,
+) -> DataLoader:
     dataset = WindowDataset(windows, targets)
+    discretized = np.rint(targets).astype(np.int64)
+    sample_weights = sample_weights_from_targets(discretized, balance_mode)
+    if sample_weights is not None:
+        sampler = WeightedRandomSampler(
+            weights=torch.as_tensor(sample_weights, dtype=torch.double),
+            num_samples=len(sample_weights),
+            replacement=True,
+            generator=torch.Generator().manual_seed(seed),
+        )
+        return DataLoader(dataset, batch_size=batch_size, sampler=sampler, num_workers=0)
     return DataLoader(
         dataset,
         batch_size=batch_size,
@@ -311,6 +351,8 @@ def predict_subjects(
     gait_window: int,
     y_mean: float | None = None,
     y_std: float | None = None,
+    calibrator: tuple[float, float] | None = None,
+    clip_output: bool = True,
 ) -> np.ndarray:
     model.eval()
     preds = []
@@ -332,7 +374,12 @@ def predict_subjects(
             else:
                 assert y_mean is not None and y_std is not None
                 value = float(np.median(outputs) * y_std + y_mean)
-                preds.append(float(np.clip(value, POMA_MIN, POMA_MAX)))
+                if calibrator is not None:
+                    slope, intercept = calibrator
+                    value = slope * value + intercept
+                if clip_output:
+                    value = float(np.clip(value, POMA_MIN, POMA_MAX))
+                preds.append(float(value))
     dtype = np.int64 if task == "classification" else np.float32
     return np.asarray(preds, dtype=dtype)
 
@@ -353,7 +400,7 @@ def train_fold(
     val_labels: np.ndarray,
     fold_seed: int,
     device: torch.device,
-) -> tuple[SparseSTGCNStroke, object, float | None, float | None]:
+) -> tuple[SparseSTGCNStroke, object, float | None, float | None, tuple[float, float] | None]:
     set_deterministic(fold_seed)
     standardizer = fit_standardizer(representation, train_sequences)
     train_windows, train_targets = make_train_windows(
@@ -383,7 +430,7 @@ def train_fold(
             train_targets.astype(np.int64),
             args.batch_size,
             fold_seed,
-            use_balancing=not args.no_clf_balancing,
+            balance_mode="none" if args.no_clf_balancing else args.clf_balance_mode,
         )
         criterion = nn.CrossEntropyLoss(label_smoothing=args.label_smoothing)
         y_mean = None
@@ -395,6 +442,7 @@ def train_fold(
             train_targets.astype(np.float32),
             args.batch_size,
             fold_seed,
+            args.reg_balance_mode,
         )
         criterion = nn.SmoothL1Loss(beta=1.0)
         y_mean = float(train_labels.mean())
@@ -453,7 +501,26 @@ def train_fold(
                 break
 
     model.load_state_dict(best_state)
-    return model, standardizer, y_mean, y_std
+    calibrator = None
+    if task == "regression" and args.reg_calibration == "linear":
+        val_preds = predict_subjects(
+            model,
+            representation,
+            task,
+            val_sequences,
+            standardizer,
+            device,
+            current_epoch=args.epochs + 1,
+            batch_size=args.batch_size,
+            window_size=args.window_size,
+            window_stride=args.window_stride,
+            gait_window=args.gait_window,
+            y_mean=y_mean,
+            y_std=y_std,
+            clip_output=False,
+        )
+        calibrator = fit_linear_calibrator(val_preds, val_labels.astype(np.float32))
+    return model, standardizer, y_mean, y_std, calibrator
 
 
 def run_cv(args: argparse.Namespace) -> Path:
@@ -484,7 +551,7 @@ def run_cv(args: argparse.Namespace) -> Path:
         val_labels = labels[val_idx]
         test_labels = labels[test_idx]
 
-        model, standardizer, y_mean, y_std = train_fold(
+        model, standardizer, y_mean, y_std, calibrator = train_fold(
             args,
             args.representation,
             args.task,
@@ -509,6 +576,7 @@ def run_cv(args: argparse.Namespace) -> Path:
             gait_window=args.gait_window,
             y_mean=y_mean,
             y_std=y_std,
+            calibrator=calibrator,
         )
         all_targets.extend(test_labels.tolist())
         all_preds.extend(test_preds.tolist())
@@ -533,7 +601,8 @@ def run_cv(args: argparse.Namespace) -> Path:
         payload = evaluate_regression(all_targets, all_preds, all_subjects)
     payload["folds"] = per_fold
     payload["config"] = vars(args)
-    out_path = RESULTS_DIR / f"sparse_stgcn_{args.representation}_{args.task}.json"
+    out_name = args.output_name or f"sparse_stgcn_{args.representation}_{args.task}.json"
+    out_path = RESULTS_DIR / out_name
     save_json(out_path, payload)
     return out_path
 
@@ -552,10 +621,14 @@ def main() -> None:
     parser.add_argument("--lr", type=float, default=0.05)
     parser.add_argument("--weight-decay", type=float, default=5e-4)
     parser.add_argument("--label-smoothing", type=float, default=0.05)
+    parser.add_argument("--clf-balance-mode", choices=["sqrt", "inverse"], default="sqrt")
+    parser.add_argument("--reg-balance-mode", choices=["none", "sqrt", "inverse"], default="none")
+    parser.add_argument("--reg-calibration", choices=["none", "linear"], default="none")
     parser.add_argument("--no-clf-balancing", action="store_true")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--n-folds", type=int, default=30)
     parser.add_argument("--max-folds", type=int, default=None)
+    parser.add_argument("--output-name", type=str, default=None)
     parser.add_argument("--device", type=str, default=None)
     parser.add_argument("--warmup", type=int, default=None)
     args = parser.parse_args()

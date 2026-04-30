@@ -78,8 +78,8 @@ Where the same family is available on both sides:
 | LSTM | 1.70 (1.37, 2.01) | **1.49 (1.12, 1.86)** | **0.70 (0.60, 0.79)** | 0.56 (0.48, 0.63) |
 | Transformer | **1.60 (1.26, 1.94)** | 2.39 (2.00, 2.77) | 0.63 (0.51, 0.71) | 0.63 (0.54, 0.70) |
 | STGCN | **2.08 (1.73, 2.40)** | 2.18 (1.80, 2.57) | **0.48 (0.42, 0.52)** | 0.39 (0.33, 0.44) |
-| Hyper-GCN (official adaptation) | **2.69 (2.05, 3.31)** | 3.06 (2.34, 3.72) | **0.56 (0.50, 0.62)** | 0.47 (0.41, 0.54) |
-| Sparse-ST-GCN (official adaptation) | **2.50 (1.95, 2.99)** | 3.49 (3.05, 3.90) | **0.28 (0.27, 0.29)** | 0.22 (0.17, 0.26) |
+| Hyper-GCN (official adaptation) | **1.79 (1.35, 2.20)** | 3.06 (2.34, 3.72) | **0.56 (0.50, 0.62)** | 0.47 (0.41, 0.54) |
+| Sparse-ST-GCN (official adaptation) | **1.50 (1.12, 1.85)** | 3.49 (3.05, 3.90) | **0.28 (0.27, 0.29)** | 0.22 (0.17, 0.26) |
 
 The tangent representation wins on most matched comparisons. The one
 clear raw-side exception is LSTM regression.
@@ -94,11 +94,11 @@ The repo now includes official-style ports of:
 Commands:
 
 ```bash
-python official_compare/hypergcn_runner.py --representation tangent --task regression --epochs 20 --batch-size 64 --device cuda:1
+python official_compare/hypergcn_runner.py --representation tangent --task regression --epochs 20 --batch-size 64 --device cuda:1 --reg-calibration linear
 python official_compare/hypergcn_runner.py --representation tangent --task classification --epochs 20 --batch-size 64 --device cuda:0
 python official_compare/hypergcn_runner.py --representation raw --task regression --epochs 20 --batch-size 64 --device cuda:1
 python official_compare/hypergcn_runner.py --representation raw --task classification --epochs 20 --batch-size 64 --device cuda:0
-python official_compare/sparse_stgcn_runner.py --representation tangent --task regression --epochs 20 --batch-size 32 --device cuda:1
+python official_compare/sparse_stgcn_runner.py --representation tangent --task regression --epochs 30 --batch-size 32 --device cuda:1 --lr 0.01 --warmup 5 --reg-balance-mode inverse --reg-calibration linear
 python official_compare/sparse_stgcn_runner.py --representation tangent --task classification --epochs 20 --batch-size 32 --device cuda:0
 python official_compare/sparse_stgcn_runner.py --representation raw --task regression --epochs 20 --batch-size 32 --device cuda:1
 python official_compare/sparse_stgcn_runner.py --representation raw --task classification --epochs 20 --batch-size 32 --device cuda:0
@@ -108,18 +108,18 @@ Current official-graph results, mean `(95% CI)`:
 
 | Method | Representation | Task | Headline Result |
 | --- | --- | --- | --- |
-| Hyper-GCN | Tangent | Regression | MAE `2.69 (2.05, 3.31)`, RMSE `5.75 (4.79, 6.53)`, R2 `-0.08 (-0.47, 0.23)`, Pearson `0.58 (0.45, 0.69)` |
+| Hyper-GCN | Tangent | Regression | MAE `1.79 (1.35, 2.20)`, RMSE `3.86 (3.09, 4.43)`, R2 `0.51 (0.36, 0.65)`, Pearson `0.74 (0.66, 0.82)` |
 | Hyper-GCN | Tangent | Classification | Accuracy `0.83 (0.78, 0.87)`, Macro-F1 `0.56 (0.50, 0.62)` |
 | Hyper-GCN | Raw | Regression | MAE `3.06 (2.34, 3.72)`, RMSE `6.51 (5.45, 7.31)`, R2 `-0.39 (-0.84, -0.06)`, Pearson `0.37 (0.23, 0.51)` |
 | Hyper-GCN | Raw | Classification | Accuracy `0.76 (0.71, 0.81)`, Macro-F1 `0.47 (0.41, 0.54)` |
-| Sparse-ST-GCN | Tangent | Regression | MAE `2.50 (1.95, 2.99)`, RMSE `5.07 (4.20, 5.73)`, R2 `0.16 (-0.03, 0.33)`, Pearson `0.50 (0.33, 0.63)` |
+| Sparse-ST-GCN | Tangent | Regression | MAE `1.50 (1.12, 1.85)`, RMSE `3.36 (2.56, 3.88)`, R2 `0.63 (0.50, 0.76)`, Pearson `0.80 (0.72, 0.87)` |
 | Sparse-ST-GCN | Tangent | Classification | Accuracy `0.72 (0.66, 0.77)`, Macro-F1 `0.28 (0.27, 0.29)` |
 | Sparse-ST-GCN | Raw | Regression | MAE `3.49 (3.05, 3.90)`, RMSE `5.10 (4.35, 5.67)`, R2 `0.15 (0.04, 0.25)`, Pearson `0.40 (0.31, 0.51)` |
 | Sparse-ST-GCN | Raw | Classification | Accuracy `0.24 (0.19, 0.29)`, Macro-F1 `0.22 (0.17, 0.26)` |
 
-The code transfer is successful. Hyper-GCN is the stronger imported
-baseline here, especially on classification, while Sparse-ST-GCN
-remains the weaker official port on this stroke setup.
+The code transfer is successful. After light regression-specific tuning,
+both imported graph models improve substantially on tangent-vector POMA
+prediction, while Hyper-GCN remains the stronger imported classifier.
 
 ## Readmes
 
