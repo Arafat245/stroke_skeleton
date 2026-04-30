@@ -100,7 +100,7 @@ Pooled out-of-fold metrics, **mean (95% CI)**.
 
 | Method | Tangent MAE | Raw MAE | Δ MAE (Raw - Tangent) | Tangent Macro F1 | Raw Macro F1 | Δ Macro F1 |
 |---|---:|---:|---:|---:|---:|---:|
-| ES-VAE / Vanilla VAE + k-NN | 1.25 | 3.79 | **+2.54** | 0.83 | 0.37 | **+0.46** |
+| ES-VAE / Vanilla VAE + k-NN | 1.25 | 3.83 | **+2.58** | 0.83 | 0.37 | **+0.46** |
 | PCA + k-NN | 1.31 | 2.87 | **+1.56** | 0.79 | 0.55 | **+0.24** |
 | Sparse-ST-GCN | 1.50 | 1.70 | +0.20 | 0.53 | 0.48 | +0.05 |
 | TCN | 1.74 | 2.66 | +0.92 | 0.75 | 0.64 | +0.11 |

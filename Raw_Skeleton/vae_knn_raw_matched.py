@@ -32,8 +32,6 @@ from sklearn.metrics import (
     r2_score,
 )
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
-from sklearn.preprocessing import StandardScaler
-
 from ci import subject_bootstrap_ci
 from ci_class import subject_bootstrap_ci_class
 from val_test import val_test
@@ -85,6 +83,46 @@ def load_lesion_labels(participant_ids: np.ndarray) -> np.ndarray:
     demo_df = pd.read_csv(DEMO_CSV)
     id_to_lesion = dict(zip(demo_df["s"].astype(int), demo_df["LesionLeft"]))
     return np.array([int(id_to_lesion[int(pid)]) for pid in participant_ids], dtype=np.int64)
+
+
+def standardize_train_apply(train_x: np.ndarray, *others: np.ndarray) -> list[np.ndarray]:
+    mean = train_x.mean(axis=0, keepdims=True).astype(np.float32)
+    std = train_x.std(axis=0, keepdims=True).astype(np.float32)
+    std = np.where(std < 1e-6, 1.0, std)
+    out = [((train_x - mean) / std).astype(np.float32)]
+    for x in others:
+        out.append(((x - mean) / std).astype(np.float32))
+    return out
+
+
+def bootstrap_interval(values: list[float], alpha: float = 0.05) -> tuple[float, float]:
+    if not values:
+        return float("nan"), float("nan")
+    arr = np.asarray(values, dtype=np.float64)
+    lo = np.percentile(arr, 100.0 * (alpha / 2.0))
+    hi = np.percentile(arr, 100.0 * (1.0 - alpha / 2.0))
+    return float(lo), float(hi)
+
+
+def subject_bootstrap_rmse_ci(
+    targets: np.ndarray,
+    preds: np.ndarray,
+    subject_ids: np.ndarray,
+    n_bootstrap: int = 2000,
+    random_state: int = 42,
+) -> tuple[float, float]:
+    rng = np.random.default_rng(random_state)
+    unique_subjects = np.unique(subject_ids)
+    boots = []
+    for _ in range(n_bootstrap):
+        sampled = rng.choice(unique_subjects, size=len(unique_subjects), replace=True)
+        idx = np.isin(subject_ids, sampled)
+        t = targets[idx]
+        p = preds[idx]
+        if len(np.unique(t)) < 2:
+            continue
+        boots.append(float(np.sqrt(mean_squared_error(t, p))))
+    return bootstrap_interval(boots)
 
 
 class StrokeVAE(nn.Module):
@@ -156,9 +194,7 @@ def evaluate_regression(x_flat: np.ndarray, participant_ids: np.ndarray, y_poma:
 
         x_train = x_flat[train_idx].astype(np.float32)
         x_test = x_flat[test_idx].astype(np.float32)
-        scaler = StandardScaler()
-        x_train = scaler.fit_transform(x_train).astype(np.float32)
-        x_test = scaler.transform(x_test).astype(np.float32)
+        x_train, x_test = standardize_train_apply(x_train, x_test)
 
         model = train_vae(x_train, device=device, epochs=epochs, seed=SEED + fold)
         z_train = encode_latents(model, x_train, device)
@@ -170,16 +206,17 @@ def evaluate_regression(x_flat: np.ndarray, participant_ids: np.ndarray, y_poma:
 
         pooled["targets"].extend(y_poma[test_idx].tolist())
         pooled["preds"].extend(preds.tolist())
-        pooled["subjects"].extend(participant_ids[test_idx].tolist())
+        pooled["subjects"].extend(participant_ids[test_idx].astype(int).tolist())
 
     targets = np.asarray(pooled["targets"], dtype=np.float32)
     preds = np.asarray(pooled["preds"], dtype=np.float32)
-    subjects = np.asarray(pooled["subjects"], dtype=str)
+    subjects = np.asarray(pooled["subjects"], dtype=np.int64)
     ci = subject_bootstrap_ci(targets, preds, subjects)
+    rmse_ci_low, rmse_ci_high = subject_bootstrap_rmse_ci(targets, preds, subjects)
     return {
         "metrics": {
             "MAE": {"mean": float(mean_absolute_error(targets, preds)), "ci_low": float(ci["MAE"]["ci"][0]), "ci_high": float(ci["MAE"]["ci"][1])},
-            "RMSE": {"mean": float(np.sqrt(mean_squared_error(targets, preds))), "ci_low": float(ci["RMSE"]["ci"][0]), "ci_high": float(ci["RMSE"]["ci"][1])},
+            "RMSE": {"mean": float(np.sqrt(mean_squared_error(targets, preds))), "ci_low": rmse_ci_low, "ci_high": rmse_ci_high},
             "R2": {"mean": float(r2_score(targets, preds)), "ci_low": float(ci["R2"]["ci"][0]), "ci_high": float(ci["R2"]["ci"][1])},
             "Pearson r": {"mean": float(np.corrcoef(targets, preds)[0, 1]), "ci_low": float(ci["Pearson r"]["ci"][0]), "ci_high": float(ci["Pearson r"]["ci"][1])},
         },
@@ -201,9 +238,7 @@ def evaluate_classification(x_flat: np.ndarray, participant_ids: np.ndarray, y_l
 
         x_train = x_flat[train_idx].astype(np.float32)
         x_test = x_flat[test_idx].astype(np.float32)
-        scaler = StandardScaler()
-        x_train = scaler.fit_transform(x_train).astype(np.float32)
-        x_test = scaler.transform(x_test).astype(np.float32)
+        x_train, x_test = standardize_train_apply(x_train, x_test)
 
         model = train_vae(x_train, device=device, epochs=epochs, seed=SEED + fold)
         z_train = encode_latents(model, x_train, device)
