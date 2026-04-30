@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import pickle
 import random
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -214,11 +215,18 @@ def split_fold(participant_ids: np.ndarray, fold_idx: int) -> tuple[np.ndarray, 
 def regression_metrics(targets: np.ndarray, preds: np.ndarray) -> dict[str, float]:
     from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
+    if len(np.unique(targets)) > 1 and len(np.unique(preds)) > 1:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            pearson_r = float(np.corrcoef(targets, preds)[0, 1])
+    else:
+        pearson_r = float("nan")
+
     return {
         "MAE": float(mean_absolute_error(targets, preds)),
         "RMSE": float(np.sqrt(mean_squared_error(targets, preds))),
         "R2": float(r2_score(targets, preds)),
-        "Pearson r": float(np.corrcoef(targets, preds)[0, 1]) if len(np.unique(targets)) > 1 else float("nan"),
+        "Pearson r": pearson_r,
     }
 
 
@@ -241,7 +249,9 @@ def evaluate_regression(targets, preds, subject_ids) -> dict:
     preds = np.asarray(preds, dtype=np.float32)
     subject_ids = np.asarray(subject_ids, dtype=np.int64)
     try:
-        metrics = subject_bootstrap_ci(targets, preds, subject_ids)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            metrics = subject_bootstrap_ci(targets, preds, subject_ids)
     except Exception:
         summary = regression_metrics(targets, preds)
         metrics = {
