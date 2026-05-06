@@ -1,18 +1,28 @@
 # Tangent-Vector Stroke Prediction
 
-This folder contains the aligned **tangent-vector** pipeline for the
-stroke gait dataset. It uses the same `155` subjects and the same `30`
-subject-level folds as `../Raw_Skeleton/`, but feeds models the aligned
-stroke tangent representation instead of raw marker coordinates.
+This folder is the official implementation of the **tangent-vector**
+pipeline for the stroke gait dataset. It uses the same `155` subjects
+and the same `30` subject-level folds as `../Raw_Skeleton/`, but feeds
+models the aligned stroke tangent representation instead of raw marker
+coordinates.
 
 The two evaluated tasks are:
 
 - **Regression**: `POMA`
 - **Classification**: 3-class `LesionLeft`
 
-## Inputs
+## Requirements
 
-All tangent experiments read from the aligned repo artifacts:
+To install requirements:
+
+```setup
+pip install -r ../requirements.txt
+```
+
+Python `3.10`+, PyTorch `2.x`, scikit-learn, NumPy, pandas, SciPy,
+Jupyter. A CUDA GPU is recommended for the deep baselines.
+
+Inputs (read from the repo root):
 
 | File | Shape | Purpose |
 |---|---|---|
@@ -21,35 +31,16 @@ All tangent experiments read from the aligned repo artifacts:
 | `../labels_data/pids.txt` | `155` ids | Subject-level CV |
 | `../labels_data/demo_data.csv` | metadata table | 3-class lesion labels |
 
-## Cross-validation protocol
+All experiments use the same subject-level `30`-fold split helper in
+`val_test.py`.
 
-All tangent experiments use the same subject-level `30`-fold split
-helper in `val_test.py`.
+## Training
 
-Reported `95%` confidence intervals are subject-level bootstrap
-intervals over pooled out-of-fold predictions.
+To train the tangent-vector models in the paper, from `Tangent_Vector/`:
 
-## Files
-
-- `ES-VAE_Reg_Final_(Geodesic_Loss).ipynb` — tangent ES-VAE regression
-- `ES-VAE_Clf_Final_(Geodesic_Loss).ipynb` — tangent ES-VAE
-  classification
-- `PCA_full_aligned.ipynb` — tangent PCA baseline; the README tables
-  report the `PCA + k-NN` rows from this notebook
-- `baselines/TCN_regclf_tangent.py` — tangent TCN
-- `baselines/sequence_regclf_tangent.py` — tangent LSTM / Transformer /
-  STGCN
-- `val_test.py` — shared subject-fold construction
-
-The adapted graph-model runners are shared from `../official_compare/`.
-
-## How to run
-
-From `Tangent_Vector/`:
-
-```bash
-jupyter notebook ES-VAE_Reg_Final_(Geodesic_Loss).ipynb
-jupyter notebook ES-VAE_Clf_Final_(Geodesic_Loss).ipynb
+```train
+jupyter notebook ES-VAE_Reg_Final_\(Geodesic_Loss\).ipynb
+jupyter notebook ES-VAE_Clf_Final_\(Geodesic_Loss\).ipynb
 jupyter notebook PCA_full_aligned.ipynb
 python baselines/TCN_regclf_tangent.py --normalize-input --n-folds 30
 python baselines/sequence_regclf_tangent.py --model lstm --normalize-input --n-folds 30
@@ -57,16 +48,31 @@ python baselines/sequence_regclf_tangent.py --model transformer --normalize-inpu
 python baselines/sequence_regclf_tangent.py --model stgcn --normalize-input --n-folds 30
 ```
 
-From repo root, for the adapted graph baselines:
+For the adapted graph baselines (run from repo root):
 
-```bash
+```train
 python official_compare/hypergcn_runner.py --representation tangent --task regression --epochs 20 --batch-size 64 --reg-calibration linear --output-name hypergcn_tangent_regression_tuned.json
 python official_compare/hypergcn_runner.py --representation tangent --task classification --epochs 20 --batch-size 64
 python official_compare/sparse_stgcn_runner.py --representation tangent --task regression --epochs 30 --batch-size 32 --lr 0.01 --warmup 5 --reg-balance-mode inverse --reg-calibration linear --output-name sparse_tangent_regression_tuned.json
 python official_compare/sparse_stgcn_runner.py --representation tangent --task classification --epochs 30 --patience 10 --batch-size 32 --lr 0.01 --label-smoothing 0.0 --clf-balance-mode inverse --warmup 5 --output-name sparse_stgcn_tangent_classification_tuned.json
 ```
 
-## Headline comparison (subject CV, 30 folds)
+## Evaluation
+
+Evaluation is integrated with training: each runner performs the full
+subject-level `30`-fold cross-validation and reports pooled
+out-of-fold metrics with bootstrap `95%` confidence intervals. The
+graph-baseline runners write JSON summaries into
+`../official_compare/results/`. The same commands above re-evaluate
+when re-run; no separate evaluation script is required.
+
+## Pre-trained Models
+
+Trained checkpoints are not redistributed. All numbers can be
+reproduced end-to-end from the training commands above using the
+shared `30`-fold subject split in `val_test.py`.
+
+## Results
 
 Pooled out-of-fold metrics, **mean (95% CI)**.
 
@@ -96,7 +102,7 @@ Pooled out-of-fold metrics, **mean (95% CI)**.
 | Sparse-ST-GCN | 0.79 (0.72, 0.86) | 0.53 (0.43, 0.62) | 0.73 (0.62, 0.85) | 0.49 (0.44, 0.55) |
 | STGCN | 0.80 (0.75, 0.85) | 0.48 (0.42, 0.52) | 0.50 (0.44, 0.56) | 0.48 (0.43, 0.53) |
 
-## Tangent vs Raw — same-method comparison
+### Tangent vs Raw — same-method comparison
 
 | Method | Tangent MAE | Raw MAE | Δ MAE (Raw - Tangent) | Tangent Macro F1 | Raw Macro F1 | Δ Macro F1 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -109,16 +115,31 @@ Pooled out-of-fold metrics, **mean (95% CI)**.
 | STGCN | 2.08 | 2.18 | +0.10 | 0.48 | 0.39 | +0.09 |
 | Hyper-GCN | 1.79 | 1.61 | -0.18 | 0.56 | 0.47 | +0.09 |
 
-## Notes
+### Notes
 
 - The tangent tables intentionally report `PCA + k-NN` rather than the
   best arbitrary classical classifier, so the comparison with
   `ES-VAE + k-NN` is fair.
 - The raw-side `Vanilla VAE + k-NN` numbers used in the tangent-vs-raw
   table come from `../Raw_Skeleton/VAE_full_raw_unaligned.ipynb`.
-- `Sparse-ST-GCN` is the stronger imported tangent regressor after the
-  light regression-only tuning used here, and with quick
-  classification-specific tuning it also improves from `0.28` to `0.53`
-  Macro F1.
+- `Sparse-ST-GCN` is the stronger imported tangent regressor after
+  light regression-only tuning, and with quick classification-specific
+  tuning improves from `0.28` to `0.53` Macro F1.
 - `ES-VAE + k-NN` remains the strongest tangent-side model overall on
   both tasks.
+
+## Files
+
+- `ES-VAE_Reg_Final_(Geodesic_Loss).ipynb` — tangent ES-VAE regression
+- `ES-VAE_Clf_Final_(Geodesic_Loss).ipynb` — tangent ES-VAE classification
+- `PCA_full_aligned.ipynb` — tangent PCA baseline (`PCA + k-NN` rows)
+- `baselines/TCN_regclf_tangent.py` — tangent TCN
+- `baselines/sequence_regclf_tangent.py` — tangent LSTM / Transformer / STGCN
+- `val_test.py` — shared subject-fold construction
+
+## Contributing
+
+Released under the **MIT License** for academic and research use.
+Contributions welcome via pull request; please file an issue first for
+substantial changes. New methods should follow the same subject-level
+`30`-fold protocol from `val_test.py` so results remain comparable.

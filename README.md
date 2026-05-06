@@ -1,82 +1,99 @@
 # Stroke Gait Analysis — Tangent-Vector vs Raw-Skeleton
 
-A controlled comparison of **aligned tangent-vector gait
-representations** against **raw 3D marker coordinates** for stroke gait
-prediction. We evaluate two tasks on the same `155` subjects under the
-same subject-level `30`-fold cross-validation:
+This repository is the official implementation of *Stroke Gait Analysis
+— Tangent-Vector vs Raw-Skeleton*, a controlled comparison of
+**aligned tangent-vector gait representations** against **raw 3D marker
+coordinates** for stroke gait prediction. We evaluate two tasks on the
+same `155` subjects under the same subject-level `30`-fold
+cross-validation:
 
 - **Regression**: `POMA`
 - **Classification**: 3-class `LesionLeft`
 
-## What's the manifold prior?
+## Requirements
 
-Each subject's gait trajectory can be represented either as:
+To install requirements:
 
-- **Raw skeleton / marker coordinates** from consecutive gait cycles
-- **Aligned tangent vectors** derived from the stroke gait manifold
-  pipeline
-
-The hypothesis is the same as in the activity-recognition repo: the
-aligned tangent representation removes nuisance variation and gives the
-downstream model cleaner geometry than raw coordinates.
-
-## Dataset
-
-| Item | Value |
-|---|---|
-| Subjects | `155` |
-| Tangent tensor | `(32, 3, 200, 155)` |
-| Raw subject data | `6` gait cycles per subject |
-| Raw gait shape | `(100, 96)` = `32 markers x 3` |
-| CV protocol | subject-level `30`-fold CV from `Tangent_Vector/val_test.py` |
-| Regression target | `POMA` |
-| Classification target | 3-class `LesionLeft` (`LesionRight`, `LesionLeft`, `Healthy`) |
-
-## Repository layout
-
-```text
-stroke_riemann/
-├── README.md
-├── official_compare/             adapted official Hyper-GCN / Sparse-ST-GCN runners
-│   ├── common.py                 shared stroke loaders, graph utils, metrics
-│   ├── hypergcn_runner.py        Hyper-GCN runner for raw / tangent, regression / classification
-│   ├── sparse_stgcn_runner.py    Sparse-ST-GCN runner for raw / tangent, regression / classification
-│   └── results/                  saved JSON summaries for graph-model runs
-├── Tangent_Vector/               tangent-vector pipeline
-│   ├── README.md
-│   ├── ES-VAE_*                  tangent ES-VAE notebooks
-│   ├── PCA_full_aligned.ipynb    PCA + KNN tangent baseline
-│   └── baselines/                TCN / LSTM / Transformer / STGCN
-├── Raw_Skeleton/                 raw-marker pipeline
-│   ├── README.md
-│   ├── PCA_full_raw_unaligned.ipynb
-│   ├── VAE_full_raw_unaligned.ipynb
-│   ├── vae_knn_raw_matched.py    matched no-alignment raw VAE + k-NN runner
-│   ├── TCN_regclf_raw.py
-│   └── data_utils_load.py
-├── aligned_data/                 tangent vectors and aligned curves
-├── data/                         processed raw regression subjects
-├── data_clf/                     processed raw classification subjects
-└── labels_data/                  POMA, participant ids, lesion labels
+```setup
+pip install -r requirements.txt
 ```
 
-## Pipeline
+Tested with Python `3.10`, PyTorch `2.x`, scikit-learn, NumPy, pandas,
+SciPy, and Jupyter. A CUDA-capable GPU is recommended for the
+deep-learning baselines but not required for the PCA / VAE + k-NN
+pipelines.
 
-1. **Load / align** the stroke gait data into either tangent-vector form
-   (`aligned_data/tangent_vecs200.pkl`) or raw gait-cycle windows.
-2. **Train** tangent and raw baselines under the same `30` subject-level
-   folds.
-3. **Evaluate** pooled out-of-fold regression and classification
-   metrics with bootstrap `95%` confidence intervals.
-4. **Compare** matched model families where only the input
-   representation changes.
+Datasets are expected at:
 
-## Headline results
+- `aligned_data/tangent_vecs200.pkl` — tangent vectors `(32, 3, 200, 155)`
+- `data/processed_loaded.pt` — raw regression subjects
+- `data_clf/processed_loaded.pt` — raw classification subjects
+- `labels_data/` — `POMA`, participant ids, lesion labels
+
+## Training
+
+To train and evaluate all models reported in the paper, run the
+representation-specific commands in the sub-folders:
+
+```train
+# Tangent-vector pipeline (proposed)
+cd Tangent_Vector
+python baselines/TCN_regclf_tangent.py --normalize-input --n-folds 30
+python baselines/sequence_regclf_tangent.py --model lstm --normalize-input --n-folds 30
+python baselines/sequence_regclf_tangent.py --model transformer --normalize-input --n-folds 30
+python baselines/sequence_regclf_tangent.py --model stgcn --normalize-input --n-folds 30
+jupyter notebook ES-VAE_Reg_Final_\(Geodesic_Loss\).ipynb
+jupyter notebook ES-VAE_Clf_Final_\(Geodesic_Loss\).ipynb
+jupyter notebook PCA_full_aligned.ipynb
+
+# Raw-skeleton pipeline
+cd ../Raw_Skeleton
+python TCN_regclf_raw.py
+python vae_knn_raw_matched.py --device cuda:0
+jupyter notebook PCA_full_raw_unaligned.ipynb
+jupyter notebook VAE_full_raw_unaligned.ipynb
+jupyter notebook LSTM_regclf_raw.ipynb
+jupyter notebook Transformer_regclf_raw.ipynb
+jupyter notebook STGCN.ipynb
+
+# Adapted official graph baselines (run from repo root)
+cd ..
+python official_compare/hypergcn_runner.py --representation tangent --task regression --epochs 20 --batch-size 64 --reg-calibration linear
+python official_compare/hypergcn_runner.py --representation raw --task classification --epochs 20 --batch-size 64
+python official_compare/sparse_stgcn_runner.py --representation tangent --task regression --epochs 30 --batch-size 32 --lr 0.01 --warmup 5 --reg-balance-mode inverse --reg-calibration linear
+python official_compare/sparse_stgcn_runner.py --representation raw --task classification --epochs 30 --patience 10 --batch-size 32 --lr 0.01 --label-smoothing 0.0 --no-clf-balancing --warmup 5
+```
+
+All experiments use the same subject-level `30`-fold split helper from
+`Tangent_Vector/val_test.py` so results are directly comparable.
+
+## Evaluation
+
+Evaluation is integrated with training: each runner / notebook performs
+subject-level `30`-fold cross-validation and writes pooled out-of-fold
+predictions plus bootstrap `95%` confidence intervals. Saved JSON
+summaries from the adapted graph baselines are written to
+`official_compare/results/`. To re-aggregate metrics from the saved
+JSON outputs:
+
+```eval
+python official_compare/hypergcn_runner.py --representation tangent --task regression --epochs 20 --batch-size 64 --reg-calibration linear --output-name hypergcn_tangent_regression_tuned.json
+python official_compare/sparse_stgcn_runner.py --representation tangent --task classification --epochs 30 --patience 10 --batch-size 32 --lr 0.01 --label-smoothing 0.0 --clf-balance-mode inverse --warmup 5 --output-name sparse_stgcn_tangent_classification_tuned.json
+```
+
+## Pre-trained Models
+
+Trained model checkpoints are not redistributed in this repository. All
+reported numbers can be reproduced end-to-end from the commands above
+on the included data using fixed seeds and the shared
+`30`-fold subject split in `Tangent_Vector/val_test.py`.
+
+## Results
 
 Pooled out-of-fold metrics, **mean (95% CI)** from subject-level
 bootstrap.
 
-### Regression (30-fold subject CV)
+### Regression — POMA (30-fold subject CV)
 
 | Input Representation | Method | MAE (95% CI) | RMSE (95% CI) | R2 (95% CI) | Pearson r (95% CI) |
 |---|---|---|---|---|---|
@@ -97,7 +114,7 @@ bootstrap.
 |  | Vanilla VAE + k-NN | 2.72 (2.33, 3.14) | 4.33 (3.77, 4.83) | 0.39 (0.26, 0.48) | 0.62 (0.52, 0.71) |
 |  | PCA + k-NN | 2.87 (2.48, 3.27) | 4.46 (3.91, 4.95) | 0.35 (0.23, 0.44) | 0.59 (0.49, 0.68) |
 
-### Classification (30-fold subject CV)
+### Classification — 3-class LesionLeft (30-fold subject CV)
 
 | Input Representation | Method | Accuracy (95% CI) | Macro F1 (95% CI) | Macro Precision (95% CI) | Macro Recall (95% CI) |
 |---|---|---|---|---|---|
@@ -118,11 +135,10 @@ bootstrap.
 |  | STGCN | 0.75 (0.70, 0.81) | 0.39 (0.33, 0.44) | 0.48 (0.38, 0.59) | 0.40 (0.36, 0.44) |
 |  | Vanilla VAE + k-NN | 0.81 (0.76, 0.86) | 0.61 (0.51, 0.69) | 0.68 (0.51, 0.85) | 0.58 (0.51, 0.66) |
 
-### Tangent - Raw gaps under subject CV
+### Tangent vs Raw — same-method comparison
 
-`Δ MAE = Raw - Tangent`, so a positive value means tangent is better.
-`Δ Macro F1 = Tangent - Raw`, so a positive value means tangent is
-better.
+`Δ MAE = Raw − Tangent` (positive ⇒ tangent better).
+`Δ Macro F1 = Tangent − Raw` (positive ⇒ tangent better).
 
 | Method pair | Tangent MAE | Raw MAE | Δ MAE | Tangent Macro F1 | Raw Macro F1 | Δ Macro F1 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -137,30 +153,44 @@ better.
 
 ### Key findings
 
-1. **Tangent ES-VAE is the best overall model on both tasks.** It is
-   the strongest regressor (`MAE 1.25`, `R2 0.74`) and the strongest
-   classifier (`Macro F1 0.83`).
-2. **`PCA + k-NN` is the fair classical comparator** to ES-VAE on both
-   tangent and raw inputs. On this dataset, the tangent PCA baseline is
-   much stronger than the raw PCA baseline for both tasks.
-3. **Tangent wins the classification comparison for every matched model
-   family.** The gains are largest for `PCA + k-NN`, `Vanilla VAE /
-   ES-VAE`, and the recurrent baselines.
-4. **Regression is still somewhat mixed outside the VAE family.**
-   Tangent wins for most families, but raw `LSTM` and raw `Hyper-GCN`
-   outperform their tangent counterparts.
-5. **The adapted official graph baselines become much more usable after
-   light task-specific tuning.** `Sparse-ST-GCN` improves sharply on
-   classification once the learning rate, balancing, smoothing, and
-   warmup are adjusted, while still remaining below the top ES-VAE /
-   PCA / TCN tangent baselines.
+1. **Tangent ES-VAE is the best overall model on both tasks** — strongest
+   regressor (`MAE 1.25`, `R2 0.74`) and strongest classifier
+   (`Macro F1 0.83`).
+2. **`PCA + k-NN` is the fair classical comparator** to ES-VAE; the
+   tangent variant beats the raw variant on both tasks.
+3. **Tangent wins the classification comparison for every matched
+   model family**, with the largest gains for `PCA + k-NN`,
+   `Vanilla VAE / ES-VAE`, and the recurrent baselines.
+4. **Regression is mixed outside the VAE family** — tangent wins for
+   most families, but raw `LSTM` and raw `Hyper-GCN` outperform their
+   tangent counterparts.
+5. **The adapted graph baselines become much more usable after light
+   task-specific tuning** — `Sparse-ST-GCN` improves sharply on
+   classification, while still trailing the top tangent baselines.
 
-## Reproduce
+## Repository layout
 
-See the folder-specific READMEs for commands and saved result files:
+```text
+stroke_riemann/
+├── README.md
+├── official_compare/             adapted official Hyper-GCN / Sparse-ST-GCN runners
+├── Tangent_Vector/               tangent-vector pipeline (see Tangent_Vector/README.md)
+├── Raw_Skeleton/                 raw-marker pipeline (see Raw_Skeleton/README.md)
+├── aligned_data/                 tangent vectors and aligned curves
+├── data/                         processed raw regression subjects
+├── data_clf/                     processed raw classification subjects
+└── labels_data/                  POMA, participant ids, lesion labels
+```
+
+See the folder-specific READMEs for per-pipeline commands and details:
 
 - [Tangent_Vector/README.md](./Tangent_Vector/README.md)
 - [Raw_Skeleton/README.md](./Raw_Skeleton/README.md)
 
-The adapted graph baselines live in `official_compare/` and write JSON
-summaries into `official_compare/results/`.
+## Contributing
+
+This code is released under the **MIT License** for academic and
+research use. Contributions are welcome via pull requests; please open
+an issue first to discuss substantial changes. When reporting new
+results, please follow the same subject-level `30`-fold protocol so
+that numbers stay directly comparable to those above.

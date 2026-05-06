@@ -1,59 +1,46 @@
 # Raw-Skeleton Stroke Prediction
 
-This folder is the parallel **raw-skeleton** pipeline for the stroke
-gait dataset. It mirrors `../Tangent_Vector/` on the same `155`
-subjects and the same `30` subject-level folds, but feeds models the
-original `32 x 3` marker coordinates instead of aligned tangent vectors.
+This folder is the official implementation of the **raw-skeleton**
+pipeline for the stroke gait dataset. It mirrors `../Tangent_Vector/`
+on the same `155` subjects and the same `30` subject-level folds, but
+feeds models the original `32 × 3` marker coordinates instead of
+aligned tangent vectors.
 
 The two evaluated tasks are:
 
 - **Regression**: `POMA`
 - **Classification**: 3-class `LesionLeft`
 
-## Inputs
+## Requirements
 
-The raw pipeline reads processed gait-cycle tensors from the repo root:
+To install requirements:
 
-- `../data/processed_loaded.pt` for regression
-- `../data_clf/processed_loaded.pt` for classification
+```setup
+pip install -r ../requirements.txt
+```
+
+Python `3.10`+, PyTorch `2.x`, scikit-learn, NumPy, pandas, SciPy,
+Jupyter. A CUDA GPU is recommended for the deep baselines.
+
+Inputs (read from the repo root):
+
+- `../data/processed_loaded.pt` — regression subjects
+- `../data_clf/processed_loaded.pt` — classification subjects
 
 Each subject contributes:
 
 - `6` gait cycles
-- each gait cycle stored as `(100, 96)` = `32 markers x 3`
+- each gait cycle stored as `(100, 96)` = `32 markers × 3`
 - subject-level regression and classification labels
 
-## Cross-validation protocol
+All raw experiments use the same subject-level `30`-fold split helper
+as the tangent pipeline: `../Tangent_Vector/val_test.py`.
 
-All raw experiments use the same subject-level `30`-fold split helper as
-the tangent pipeline: `../Tangent_Vector/val_test.py`.
+## Training
 
-Reported `95%` confidence intervals are subject-level bootstrap
-intervals over pooled out-of-fold predictions.
+To train the raw-skeleton models in the paper, from `Raw_Skeleton/`:
 
-## Files
-
-- `TCN_regclf_raw.py` / `TCN_regclf_raw.ipynb` — raw TCN for regression
-  and classification
-- `LSTM_regclf_raw.ipynb` — raw LSTM baseline
-- `Transformer_regclf_raw.ipynb` — raw Transformer baseline
-- `STGCN.ipynb` — raw STGCN baseline
-- `PCA_full_raw_unaligned.ipynb` — raw PCA baseline; the README tables
-  report the `PCA + k-NN` rows from this notebook
-- `VAE_full_raw_unaligned.ipynb` — raw `Vanilla VAE + k-NN` baseline
-- `vae_knn_raw_matched.py` — auxiliary raw VAE runner matched to the
-  no-alignment ablation setup
-- `data_utils_load.py` — subject loading, train-fold standardization,
-  gait batching
-- `val_test.py` — shared subject-fold construction
-
-The adapted graph-model runners are shared from `../official_compare/`.
-
-## How to run
-
-From `Raw_Skeleton/`:
-
-```bash
+```train
 jupyter notebook PCA_full_raw_unaligned.ipynb
 jupyter notebook VAE_full_raw_unaligned.ipynb
 jupyter notebook LSTM_regclf_raw.ipynb
@@ -63,16 +50,31 @@ python TCN_regclf_raw.py
 python vae_knn_raw_matched.py --device cuda:0
 ```
 
-From repo root, for the adapted graph baselines:
+For the adapted graph baselines (run from repo root):
 
-```bash
+```train
 python official_compare/hypergcn_runner.py --representation raw --task regression --epochs 20 --batch-size 64 --reg-calibration linear --output-name hypergcn_raw_regression_tuned.json
 python official_compare/hypergcn_runner.py --representation raw --task classification --epochs 20 --batch-size 64
 python official_compare/sparse_stgcn_runner.py --representation raw --task regression --epochs 30 --batch-size 32 --lr 0.01 --warmup 5 --reg-balance-mode inverse --reg-calibration linear --output-name sparse_raw_regression_tuned.json
 python official_compare/sparse_stgcn_runner.py --representation raw --task classification --epochs 30 --patience 10 --batch-size 32 --lr 0.01 --label-smoothing 0.0 --no-clf-balancing --warmup 5 --output-name sparse_stgcn_raw_classification_tuned.json
 ```
 
-## Headline comparison (subject CV, 30 folds)
+## Evaluation
+
+Evaluation is integrated with training: each runner performs the full
+subject-level `30`-fold cross-validation and reports pooled
+out-of-fold metrics with bootstrap `95%` confidence intervals. The
+graph-baseline runners write JSON summaries into
+`../official_compare/results/`. Re-running the commands above
+re-evaluates the corresponding model.
+
+## Pre-trained Models
+
+Trained checkpoints are not redistributed. All numbers can be
+reproduced end-to-end from the training commands above using the
+shared `30`-fold subject split in `../Tangent_Vector/val_test.py`.
+
+## Results
 
 Pooled out-of-fold metrics, **mean (95% CI)**.
 
@@ -102,7 +104,7 @@ Pooled out-of-fold metrics, **mean (95% CI)**.
 | STGCN | 0.75 (0.70, 0.81) | 0.39 (0.33, 0.44) | 0.48 (0.38, 0.59) | 0.40 (0.36, 0.44) |
 | Vanilla VAE + k-NN | 0.81 (0.76, 0.86) | 0.61 (0.51, 0.69) | 0.68 (0.51, 0.85) | 0.58 (0.51, 0.66) |
 
-## Tangent vs Raw — same-method comparison
+### Tangent vs Raw — same-method comparison
 
 | Method | Tangent MAE | Raw MAE | Δ MAE (Raw - Tangent) | Tangent Macro F1 | Raw Macro F1 | Δ Macro F1 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -115,14 +117,35 @@ Pooled out-of-fold metrics, **mean (95% CI)**.
 | STGCN | 2.08 | 2.18 | +0.10 | 0.48 | 0.39 | +0.09 |
 | Hyper-GCN | 1.79 | 1.61 | -0.18 | 0.56 | 0.47 | +0.09 |
 
-## Notes
+### Notes
 
-- The raw tables intentionally report `PCA + k-NN` rather than the best
-  arbitrary classical model, so the comparison with `ES-VAE + k-NN` is
-  fair.
+- The raw tables intentionally report `PCA + k-NN` rather than the
+  best arbitrary classical model, so the comparison with
+  `ES-VAE + k-NN` is fair.
 - The raw `Vanilla VAE + k-NN` row comes from
-  `VAE_full_raw_unaligned.ipynb` and is included in both regression and
-  classification tables.
-- After light task-specific tuning, `Sparse-ST-GCN` becomes a much more
-  reasonable raw classification baseline, improving from a collapsed
-  `0.22` Macro F1 run to `0.48`.
+  `VAE_full_raw_unaligned.ipynb` and is included in both regression
+  and classification tables.
+- After light task-specific tuning, `Sparse-ST-GCN` becomes a much
+  more reasonable raw classification baseline, improving from a
+  collapsed `0.22` Macro F1 run to `0.48`.
+
+## Files
+
+- `TCN_regclf_raw.py` / `TCN_regclf_raw.ipynb` — raw TCN
+- `LSTM_regclf_raw.ipynb` — raw LSTM baseline
+- `Transformer_regclf_raw.ipynb` — raw Transformer baseline
+- `STGCN.ipynb` — raw STGCN baseline
+- `PCA_full_raw_unaligned.ipynb` — raw `PCA + k-NN`
+- `VAE_full_raw_unaligned.ipynb` — raw `Vanilla VAE + k-NN`
+- `vae_knn_raw_matched.py` — auxiliary raw VAE runner matched to the
+  no-alignment ablation setup
+- `data_utils_load.py` — subject loading, train-fold standardization,
+  gait batching
+- `val_test.py` — shared subject-fold construction
+
+## Contributing
+
+Released under the **MIT License** for academic and research use.
+Contributions welcome via pull request; please file an issue first for
+substantial changes. New methods should follow the same subject-level
+`30`-fold protocol so results remain comparable.
